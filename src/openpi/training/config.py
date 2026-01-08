@@ -20,6 +20,7 @@ import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
+from openpi.policies import franka_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
@@ -461,6 +462,73 @@ class LeRobotDROIDDataConfig(DataConfigFactory):
             model_transforms=model_transforms,
         )
 
+@dataclasses.dataclass(frozen=True)
+class LeRobotFrankaDataConfig(DataConfigFactory):
+    """
+    Config for Franka Research 3 dataset in LeRobot format.
+    Adapts specific keys from info.json to OpenPi format.
+    """
+    # 如果数据集中找不到 prompt 列，默认使用这个提示词
+    default_prompt: str | None = "do the task"
+    
+    # 是否强制将动作转为 Delta。
+    # 你的 info.json 显示 action names 已经是 dx, dy... 所以默认 False。
+    convert_to_delta: bool = False 
+    
+    action_sequence_keys: Sequence[str] = ("action",)
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        # 1. 关键步骤：Key Mapping (RepackTransform)
+        # 左边是代码里用的短名字，右边是你 info.json 里的长名字
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        # 图像映射
+                        "image": "observation.images.fish_eye_front",
+                        
+                        # 状态映射 (注意这里分别映射，后面 Policy 里再拼接)
+                        "tcp_pose": "observation.state.tcp_pose",
+                        "gripper_pose": "observation.state.gripper_pose",
+                        
+                        # 动作映射
+                        "actions": "action",
+                        
+                        # 提示词 (如果 info.json 里没有 language_instruction，这行可能无效，会用到 default_prompt)
+                        "prompt": "prompt", 
+                    }
+                )
+            ]
+        )
+
+        # 2. 数据处理流水线
+        data_transforms = _transforms.Group(
+            inputs=[franka_policy.FrankaInputs(model_type=model_config.model_type)],
+            outputs=[franka_policy.FrankaOutputs()],
+        )
+
+        # 3. 动作 Delta 转换 (可选)
+        # 如果你的 parquet 存的是绝对坐标，把这个设为 True
+        if self.convert_to_delta:
+            # 假设前6维是 Pose，第7维是 Gripper
+            delta_action_mask = _transforms.make_bool_mask(6, -1)
+            data_transforms = data_transforms.push(
+                inputs=[_transforms.DeltaActions(delta_action_mask)],
+                outputs=[_transforms.AbsoluteActions(delta_action_mask)],
+            )
+
+        # 4. 模型相关处理 (Resize, Tokenize)
+        # 这里会自动把图像 Resize 到 224x224
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=self.action_sequence_keys, 
+        )
 
 @dataclasses.dataclass(frozen=True)
 class TrainConfig:
@@ -916,6 +984,48 @@ _CONFIGS = [
         num_train_steps=20_000,
         batch_size=32,
     ),
+
+    #
+    # Fine-tuning Franka configs.
+    #
+TrainConfig(
+        name="pi05_franka_finetune",
+        
+        # 使用 Pi0.5 配置
+        # pi05=True
+        # action_dim=7: 对应你的 features.action.shape [7]
+        # action_horizon=10: 一次预测未来 10 步 (可根据需要调整)
+        model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
+        
+        data=LeRobotFrankaDataConfig(
+            # 你的数据集路径 (对应 LEROBOT_HOME 下的 local/franka_place_0107)
+            repo_id="local/franka_place_0107", 
+            
+            # 统计量 (Norm Stats) 路径
+            # 理想情况下你应该先运行 compute_norm_stats 脚本计算自己的统计量
+            # 暂时先借用 base 模型的 assets (可能会导致动作归一化不准，建议替换)
+            # assets=AssetsConfig(
+            #     assets_dir="gs://openpi-assets/checkpoints/pi05_base/assets",
+            #     asset_id="trossen", 
+            # ),
+            
+            # 尝试从 Task Description 中获取 Prompt
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        
+        # 加载 Pi0.5 Base 权重进行微调
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+        
+        # 训练参数
+        num_train_steps=20_000,
+        batch_size=8, # A100 80G 可以尝试 32
+        save_interval=1000,
+        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+        assets_base_dir="/share/guqiuyi-local/assets",
+    ),
+    
     #
     # ALOHA Sim configs. This config is used to demonstrate how to train on a simple simulated environment.
     #

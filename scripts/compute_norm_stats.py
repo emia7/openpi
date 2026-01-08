@@ -31,7 +31,9 @@ def create_torch_dataloader(
 ) -> tuple[_data_loader.Dataset, int]:
     if data_config.repo_id is None:
         raise ValueError("Data config must have a repo_id")
+    print(f"Creating Torch dataset from repo_id: {data_config.repo_id}")
     dataset = _data_loader.create_torch_dataset(data_config, action_horizon, model_config)
+    print(f"Dataset length: {len(dataset)}")
     dataset = _data_loader.TransformedDataset(
         dataset,
         [
@@ -41,12 +43,14 @@ def create_torch_dataloader(
             RemoveStrings(),
         ],
     )
+    print(f"Transformed dataset length: {len(dataset)}")
     if max_frames is not None and max_frames < len(dataset):
         num_batches = max_frames // batch_size
         shuffle = True
     else:
         num_batches = len(dataset) // batch_size
         shuffle = False
+    print(f"Number of batches: {num_batches}, shuffle: {shuffle}")
     data_loader = _data_loader.TorchDataLoader(
         dataset,
         local_batch_size=batch_size,
@@ -54,6 +58,7 @@ def create_torch_dataloader(
         shuffle=shuffle,
         num_batches=num_batches,
     )
+    print(f"Created Torch data loader with {num_workers} workers")
     return data_loader, num_batches
 
 
@@ -89,16 +94,21 @@ def create_rlds_dataloader(
 def main(config_name: str, max_frames: int | None = None):
     config = _config.get_config(config_name)
     data_config = config.data.create(config.assets_dirs, config.model)
-
+    print(f"Computing normalization stats for data config: {data_config}")
+    
     if data_config.rlds_data_dir is not None:
+        print("Using RLDS data loader")
         data_loader, num_batches = create_rlds_dataloader(
             data_config, config.model.action_horizon, config.batch_size, max_frames
         )
+        print(f"RLDS data dir: {data_config.rlds_data_dir}")
     else:
+        print("Using Torch data loader")
         data_loader, num_batches = create_torch_dataloader(
             data_config, config.model.action_horizon, config.batch_size, config.model, config.num_workers, max_frames
         )
-
+        print(f"Torch data repo id: {data_config.repo_id}") 
+    print(f"Number of batches: {num_batches}")
     keys = ["state", "actions"]
     stats = {key: normalize.RunningStats() for key in keys}
 
