@@ -999,7 +999,7 @@ TrainConfig(
         
         data=LeRobotFrankaDataConfig(
             # 你的数据集路径 (对应 LEROBOT_HOME 下的 local/franka_place_0107)
-            repo_id="local/franka_place_0107", 
+            repo_id="local/franka_pick_place_0115", 
             
             # 统计量 (Norm Stats) 路径
             # 理想情况下你应该先运行 compute_norm_stats 脚本计算自己的统计量
