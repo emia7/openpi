@@ -117,6 +117,34 @@ def main(config_name: str, max_frames: int | None = None):
             stats[key].update(np.asarray(batch[key]))
 
     norm_stats = {key: stats.get_statistics() for key, stats in stats.items()}
+    
+    # =========================================================================
+    # 手动覆盖 Gripper 统计量 (不做数据驱动的归一化，改为固定范围)
+    if "actions" in norm_stats:
+        print("\n[Manual Override] Detecting 'actions' stats...")
+        act_stats = norm_stats["actions"]
+        
+        # 假设夹爪是动作的第x个维度 (第7维)
+        gripper_idx = 6 
+        
+        print(f"[Manual Override] Forcing Gripper (dim {gripper_idx}) stats to safe values [-1, 1].")
+        
+        # 为什么设为 q01=-1, q99=1 ?
+        # 归一化公式: x_norm = (x - q01) / (q99 - q01) * 2 - 1
+        # 当 x=1 时: (1 - (-1)) / 2 * 2 - 1 = 1
+        # 当 x=-1 时: (-1 - (-1)) / 2 * 2 - 1 = -1
+        # 当 x=0 时: (0 - (-1)) / 2 * 2 - 1 = 0
+        # 结论：这等效于不做归一化 (Identity)，或者说把 [-1, 1] 映射到 [-1, 1]
+        
+        print("length of action stats arrays:", len(act_stats.q01), len(act_stats.q99))
+        act_stats.q01[gripper_idx] = -1.0
+        act_stats.q99[gripper_idx] = 1.0
+        
+        # 均值设为0，方差设为1 (防止 Z-Score 归一化爆炸)
+        act_stats.mean[gripper_idx] = 0.0
+        act_stats.std[gripper_idx] = 1.0
+        
+    # =========================================================================
 
     output_path = config.assets_dirs / data_config.repo_id
     print(f"Writing stats to: {output_path}")
