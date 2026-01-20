@@ -988,7 +988,7 @@ _CONFIGS = [
     #
     # Fine-tuning Franka configs.
     #
-TrainConfig(
+    TrainConfig(
         name="pi05_franka_finetune",
         
         # 使用 Pi0.5 配置
@@ -999,7 +999,7 @@ TrainConfig(
         
         data=LeRobotFrankaDataConfig(
             # 你的数据集路径 (对应 LEROBOT_HOME 下的 local/franka_pick_place_0112)
-            repo_id="local/franka_pick_place_0112", 
+            repo_id="local/franka_pick_place_0118", 
             
             # 统计量 (Norm Stats) 路径
             # 理想情况下你应该先运行 compute_norm_stats 脚本计算自己的统计量
@@ -1020,7 +1020,7 @@ TrainConfig(
         
         # 训练参数
         num_train_steps=20_000,
-        batch_size=32, # A100 80G 可以尝试 32
+        batch_size=16, # A100 80G 可以尝试 32
         save_interval=1000,
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
