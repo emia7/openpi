@@ -7,6 +7,7 @@ import difflib
 import logging
 import pathlib
 from typing import Any, Literal, Protocol, TypeAlias
+import numpy as np
 
 import etils.epath as epath
 import flax.nnx as nnx
@@ -20,7 +21,8 @@ import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
-from openpi.policies import franka_policy
+import openpi.policies.franka_policy as franka_policy
+import openpi.policies.franka_rel_policy as franka_rel_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
@@ -531,6 +533,80 @@ class LeRobotFrankaDataConfig(DataConfigFactory):
         )
 
 @dataclasses.dataclass(frozen=True)
+class LeRobotFrankaRelDataConfig(DataConfigFactory):
+    """
+    Config for Relative Action training.
+    Reads BOTH absolute pose sequence AND raw action sequence.
+    """
+    default_prompt: str | None = "do the task"
+    
+    # !!! 关键修改 !!!
+    # 我们告诉 Data Loader 读取两列数据拼成 sequence
+    # 1. observation.state.tcp_pose (7维): 用于计算相对位姿
+    # 2. action (7维): 用于提取 gripper action
+    # 最终 data["actions"] 的形状是 (Batch, Horizon, 14)
+    action_sequence_keys: Sequence[str] = (
+        "observation.state.tcp_pose", 
+        "action"
+    )
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        # 1. 创建基础配置 (为了获取 repo_id 等)
+        # 注意：这里我们不再依赖从硬盘加载的 stats，因为那些 stats 是针对绝对坐标的
+        config = self.create_base_config(assets_dirs, model_config)
+
+        # 2. 手动重写 Actions 统计量 (Manual Override)
+        # 因为我们是在运行时计算相对动作 (Relative Action)，硬盘上的 stats.json 并不适用。
+        # 相对动作通常分布在 0 附近。
+        # 我们创建一个 "Identity" 统计量 (Mean=0, Std=1, Q01=-1, Q99=1)
+        # 这样数据进入模型时大约保持原样，让模型直接学习物理数值。
+        # if config.norm_stats is None: config.norm_stats = {}
+        
+        # target_dim = 32
+        # print(f"!!! Overriding Action Stats for Relative Pose Training (Dim {target_dim}) !!!")
+        
+        # default_stats = _transforms.NormStats(
+        #     mean=np.zeros(target_dim, dtype=np.float32),
+        #     std=np.ones(target_dim, dtype=np.float32),
+        #     q01=np.full(target_dim, -1.0, dtype=np.float32),
+        #     q99=np.full(target_dim, 1.0, dtype=np.float32),
+        #     min=np.full(target_dim, -1.0, dtype=np.float32),
+        #     max=np.full(target_dim, 1.0, dtype=np.float32),
+        # )
+        # config.norm_stats["actions"] = default_stats
+
+        # 3. 定义 Transforms
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "image": "observation.images.fish_eye_front",
+                        "prompt": "prompt", 
+                        "tcp_pose": "observation.state.tcp_pose",
+                        "raw_actions": "action",
+                        "gripper_pose": "observation.state.gripper_pose",
+                    }
+                )
+            ]
+        )
+
+        data_transforms = _transforms.Group(
+            inputs=[franka_rel_policy.FrankaRelInputs(model_type=model_config.model_type)],
+            outputs=[franka_rel_policy.FrankaRelOutputs()],
+        )
+
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+
+        return dataclasses.replace(
+            config,
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=self.action_sequence_keys,
+        )
+
+@dataclasses.dataclass(frozen=True)
 class TrainConfig:
     # Name of the config. Must be unique. Will be used to reference this config.
     name: tyro.conf.Suppress[str]
@@ -1001,14 +1077,6 @@ _CONFIGS = [
             # 你的数据集路径 (对应 LEROBOT_HOME 下的 local/franka_pick_place_0112)
             repo_id="local/franka_pick_place_0118", 
             
-            # 统计量 (Norm Stats) 路径
-            # 理想情况下你应该先运行 compute_norm_stats 脚本计算自己的统计量
-            # 暂时先借用 base 模型的 assets (可能会导致动作归一化不准，建议替换)
-            # assets=AssetsConfig(
-            #     assets_dir="gs://openpi-assets/checkpoints/pi05_base/assets",
-            #     asset_id="trossen", 
-            # ),
-            
             # 尝试从 Task Description 中获取 Prompt
             base_config=DataConfig(prompt_from_task=True),
         ),
@@ -1025,7 +1093,28 @@ _CONFIGS = [
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
-    
+
+    TrainConfig(
+        name="pi05_franka_rel_finetune",
+        # Pi0.5 配置
+        model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
+        
+        data=LeRobotFrankaRelDataConfig(
+            repo_id="local/franka_pick_place_0118", 
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+        
+        num_train_steps=20_000,
+        batch_size=16,
+        save_interval=1000,
+        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+        assets_base_dir="/share/guqiuyi-local/assets",
+    ),
+
     #
     # ALOHA Sim configs. This config is used to demonstrate how to train on a simple simulated environment.
     #
