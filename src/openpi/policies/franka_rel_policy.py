@@ -51,31 +51,7 @@ def _compute_relative_pose(curr_pose: np.ndarray, target_pose: np.ndarray) -> np
     r_rel = r_curr.inv() * r_target
     r_rel_vec = r_rel.as_rotvec()
     
-    return np.concatenate([p_rel, r_rel_vec])
-
-@dataclasses.dataclass(frozen=True)
-class FrankaRelInputs(transforms.DataTransformFn):
-    model_type: _model.ModelType
-
-    def __call__(self, data: dict) -> dict:
-        # ---------------------------------------------------------
-        # 1. State Processing (当前时刻的绝对状态)
-        # ---------------------------------------------------------
-        tcp_pose = np.asarray(data["tcp_pose"])     # 预期 (B, 7)
-        gripper_pose = np.asarray(data["gripper_pose"]) # 预期 (B,) 或 (B, 1)
-        
-        if tcp_pose.ndim == 2:
-            # tcp: (10, 7), gripper: (1,)
-            # 取第一帧作为当前状态
-            tcp_pose = tcp_pose[0]
-        
-        # 为了兼容单条数据的情况 (非 Batch 模式)，保留之前的标量处理
-        if gripper_pose.ndim == 0:
-            gripper_pose = gripper_pose[None]
-        
-        # 现在两个应该都是 2D (B, 7) 和 (B, 1)，或者都是 1D (7,) 和 (1,)
-        state = np.concatenate([tcp_pose, gripper_pose], axis=-1).astype(np.float32)
- 
+    return np.concatenate([p_rel, r_rel_vec]) 
 
 @dataclasses.dataclass(frozen=True)
 class FrankaRelInputs(transforms.DataTransformFn):

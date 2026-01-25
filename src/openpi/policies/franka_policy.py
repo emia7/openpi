@@ -36,9 +36,7 @@ class FrankaInputs(transforms.DataTransformFn):
         # ---------------------------------------------------------
         # 1. State Processing
         # ---------------------------------------------------------
-        # 你的数据: tcp_pose (7) + gripper_pose (1)
-
-        # State: 8维
+        # State: tcp_pose (7) + gripper_pose (1)
         tcp = np.asarray(data["tcp_pose"])
         gripper = np.asarray(data["gripper_pose"])
         if gripper.ndim == 0: gripper = gripper[None]
