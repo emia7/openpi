@@ -140,6 +140,7 @@ def main(_):
                 # Note: 'return' calc omitted for brevity, can be recomputed or loaded if saved in process_local
                 "return": np.array([0.0], dtype=np.float32), 
                 "done": np.array([idx == len(df)-1], dtype=bool),
+                "task": meta["task_description"],
             }
             
             # Extract Images
@@ -149,9 +150,9 @@ def main(_):
                     raise RuntimeError(f"Video {cam} ended prematurely at step {idx}/{len(df)}")
                 # OpenCV is BGR, LeRobot/PyTorch expects RGB
                 frame[f"observation.images.{cam}"] = img[..., ::-1]
-            
-            dataset.add_frame(frame, task=meta["task_description"])
         
+            dataset.add_frame(frame)
+
         # Cleanup videos
         for cap in video_caps.values():
             cap.release()

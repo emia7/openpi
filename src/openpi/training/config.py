@@ -1075,7 +1075,7 @@ _CONFIGS = [
         
         data=LeRobotFrankaDataConfig(
             # 你的数据集路径 (对应 LEROBOT_HOME 下的 local/franka_pick_place_0112)
-            repo_id="local/franka_pick_place_0121", 
+            repo_id="local/franka_pick_place_cubes_0125_v1", 
             
             # 尝试从 Task Description 中获取 Prompt
             base_config=DataConfig(prompt_from_task=True),
@@ -1100,7 +1100,7 @@ _CONFIGS = [
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         
         data=LeRobotFrankaRelDataConfig(
-            repo_id="local/franka_pick_place_0121", 
+            repo_id="local/franka_pick_place_cubes_0125_v1", 
             base_config=DataConfig(prompt_from_task=True),
         ),
         
