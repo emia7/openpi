@@ -258,7 +258,7 @@ if __name__ == "__main__":
     p.add_argument("--repo", required=True, help="Output LeRobot repo name")
     p.add_argument("--robot_type", default="XV")
     p.add_argument("--target_fps", type=float, default=10.0, help="Downsample target fps, e.g. 10")
-    p.add_argument("--task", type=str, default="put the purple cup into the plate")
+    p.add_argument("--task", type=str, default="put cubes into the cabinet")
     args = p.parse_args()
 
     main(

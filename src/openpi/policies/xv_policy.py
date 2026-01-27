@@ -150,13 +150,19 @@ class XVOutputs(transforms.DataTransformFn):
 
     def __call__(self, data: dict) -> dict:
         act = np.asarray(data["actions"], dtype=np.float32)  # (H,11)
-        
+        # ---- gripper ----
         gripper = act[..., 9:10].astype(np.float32) / 88 # (H,1)
-        
+
+        # =========================================================
+        # Convert EEF-frame delta -> BASE-frame delta for Franka
+        # Need current end-effector rotation R_cur (base <- eef)
+        # Get it from state: [pos(3), rotvec_cur(3), ...]
+        # =========================================================
+
         pose10d = act[..., :9]   # (H,9)
+
         mat = pose10d_to_mat(pose10d)
         pose6d = mat_to_pose6(mat)
-
         action_7d = np.concatenate([pose6d,gripper], axis=-1).astype(np.float32)
 
         return {"actions": action_7d}        # (H,7)
