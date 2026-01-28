@@ -23,6 +23,7 @@ import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
 import openpi.policies.franka_policy as franka_policy
 import openpi.policies.franka_rel_policy as franka_rel_policy
+import openpi.policies.xv_policy as xv_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
@@ -540,8 +541,7 @@ class LeRobotFrankaRelDataConfig(DataConfigFactory):
     """
     default_prompt: str | None = "do the task"
     
-    # !!! 关键修改 !!!
-    # 我们告诉 Data Loader 读取两列数据拼成 sequence
+    # 告诉 Data Loader 读取两列数据拼成 sequence
     # 1. observation.state.tcp_pose (7维): 用于计算相对位姿
     # 2. action (7维): 用于提取 gripper action
     # 最终 data["actions"] 的形状是 (Batch, Horizon, 14)
@@ -552,31 +552,8 @@ class LeRobotFrankaRelDataConfig(DataConfigFactory):
 
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
-        # 1. 创建基础配置 (为了获取 repo_id 等)
-        # 注意：这里我们不再依赖从硬盘加载的 stats，因为那些 stats 是针对绝对坐标的
         config = self.create_base_config(assets_dirs, model_config)
 
-        # 2. 手动重写 Actions 统计量 (Manual Override)
-        # 因为我们是在运行时计算相对动作 (Relative Action)，硬盘上的 stats.json 并不适用。
-        # 相对动作通常分布在 0 附近。
-        # 我们创建一个 "Identity" 统计量 (Mean=0, Std=1, Q01=-1, Q99=1)
-        # 这样数据进入模型时大约保持原样，让模型直接学习物理数值。
-        # if config.norm_stats is None: config.norm_stats = {}
-        
-        # target_dim = 32
-        # print(f"!!! Overriding Action Stats for Relative Pose Training (Dim {target_dim}) !!!")
-        
-        # default_stats = _transforms.NormStats(
-        #     mean=np.zeros(target_dim, dtype=np.float32),
-        #     std=np.ones(target_dim, dtype=np.float32),
-        #     q01=np.full(target_dim, -1.0, dtype=np.float32),
-        #     q99=np.full(target_dim, 1.0, dtype=np.float32),
-        #     min=np.full(target_dim, -1.0, dtype=np.float32),
-        #     max=np.full(target_dim, 1.0, dtype=np.float32),
-        # )
-        # config.norm_stats["actions"] = default_stats
-
-        # 3. 定义 Transforms
         repack_transform = _transforms.Group(
             inputs=[
                 _transforms.RepackTransform(
@@ -604,6 +581,49 @@ class LeRobotFrankaRelDataConfig(DataConfigFactory):
             data_transforms=data_transforms,
             model_transforms=model_transforms,
             action_sequence_keys=self.action_sequence_keys,
+        )
+
+@dataclasses.dataclass(frozen=True)
+class LeRobotXVDataConfig(DataConfigFactory):
+    """
+    Example data config for XV dataset in LeRobot format.
+    Dataset keys from your conversion script:
+      - wrist_view: video frame (H,W,3) uint8
+      - state: float32 (8,)
+      - actions: float32 (8,)  (next-state)
+      - task: instruction string
+
+    """
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "image": "image",
+                        "eef_pos": "eef_pos",
+                        "eef_rot_axis_angle": "eef_rot_axis_angle",
+                        "gripper_width": "gripper_width",
+                        "demo_start_pose": "demo_start_pose",
+                        "actions": "actions",
+                        "task": "task",
+                    }
+                )
+            ]
+        )
+        # We assume joint *velocity* actions, so we should *not* apply an additional delta transform.
+        data_transforms = _transforms.Group(
+            inputs=[xv_policy.XVInputs(model_type=model_config.model_type, action_dim=model_config.action_dim, action_horizon=model_config.action_horizon)],
+            outputs=[xv_policy.XVOutputs()],
+        )
+        model_transforms = ModelTransformFactory()(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
         )
 
 @dataclasses.dataclass(frozen=True)
@@ -1100,7 +1120,7 @@ _CONFIGS = [
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         
         data=LeRobotFrankaRelDataConfig(
-            repo_id="local/franka_pick_place_cubes_0125_v1", 
+            repo_id="local/umi_pick_place_cubes_0125",
             base_config=DataConfig(prompt_from_task=True),
         ),
         
@@ -1111,6 +1131,34 @@ _CONFIGS = [
         num_train_steps=20_000,
         batch_size=16,
         save_interval=1000,
+        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+        assets_base_dir="/share/guqiuyi-local/assets",
+    ),
+
+    TrainConfig(
+        name="pi05_xv_finetune",
+        model=pi0_config.Pi0Config(
+            pi05=True,
+            action_dim=32,  # pi05 is trained with 32-dim actions
+            action_horizon=16,
+        ),
+        data=LeRobotXVDataConfig(
+            # repo_id="/share/chenshuaiwen-local/.cache/hf_home/fastumi/0112",
+            repo_id="local/umi_pick_place_cubes_0125_csw",
+            base_config=DataConfig(
+                prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+
+        log_interval=500,
+        keep_period=10_000,
+
+        num_train_steps=30_000,
+        batch_size=32,
+        save_interval=2000,
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
     ),

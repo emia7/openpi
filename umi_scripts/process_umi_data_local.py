@@ -7,7 +7,6 @@ from cv_bridge import CvBridge
 import imageio.v3 as iio
 import rosbag
 
-# === [新增] 导入绘图和数学库 ===
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from scipy.spatial.transform import Rotation as R
