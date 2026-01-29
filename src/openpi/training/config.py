@@ -1120,7 +1120,7 @@ _CONFIGS = [
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         
         data=LeRobotFrankaRelDataConfig(
-            repo_id="local/umi_pick_place_cubes_0125",
+            repo_id="local/franka_pick_place_0121",
             base_config=DataConfig(prompt_from_task=True),
         ),
         
@@ -1165,7 +1165,8 @@ _CONFIGS = [
         ),
         data=LeRobotXVDataConfig(
             # repo_id="/share/chenshuaiwen-local/.cache/hf_home/fastumi/0112",
-            repo_id="local/umi_pick_place_cubes_0125_csw",
+            # repo_id="local/umi_pick_place_cubes_0125_csw",
+            repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0122_s1/10000/assets",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
