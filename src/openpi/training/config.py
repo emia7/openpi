@@ -1164,9 +1164,8 @@ _CONFIGS = [
             action_horizon=16,
         ),
         data=LeRobotXVDataConfig(
-            # repo_id="/share/chenshuaiwen-local/.cache/hf_home/fastumi/0112",
-            # repo_id="local/umi_pick_place_cubes_0125_csw",
-            repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0122_s1/10000/assets",
+            # repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0122_s1/10000/assets",
+            repo_id="local/umi_stock_shelves_0128",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
@@ -1186,7 +1185,7 @@ _CONFIGS = [
     ),
 
     TrainConfig(
-        name="pi05_xv_finetune_test1",
+        name="pi05_xv_finetune_fast",
         model=pi0_config.Pi0Config(
             pi05=True,
             action_dim=32,  # pi05 is trained with 32-dim actions
@@ -1194,7 +1193,7 @@ _CONFIGS = [
         ),
         data=LeRobotXVDataConfig(
             # repo_id="/share/chenshuaiwen-local/.cache/hf_home/fastumi/0112",
-            repo_id="local/umi_pick_place_cubes_0125_csw",
+            repo_id="local/umi_stock_shelves_0128",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
