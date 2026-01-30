@@ -43,4 +43,4 @@ ARGS=(
 [[ "$SKIP_FAILED" == "true" ]] && ARGS+=(--skip_failed) || ARGS+=(--noskip_failed)
 
 # 执行 Python 脚本
-"$PROJECT_ROOT/.venv/bin/python" scripts/process_data_server.py "${ARGS[@]}"
+"$PROJECT_ROOT/.venv/bin/python" scripts/process_franka_data_server.py "${ARGS[@]}"
