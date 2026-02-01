@@ -1130,7 +1130,7 @@ _CONFIGS = [
         
         num_train_steps=20_000,
         batch_size=16,
-        save_interval=1000,
+        save_interval=2000,
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
@@ -1185,15 +1185,16 @@ _CONFIGS = [
     ),
 
     TrainConfig(
-        name="pi05_xv_finetune_fast",
+        name="pi05_umi_finetune",
         model=pi0_config.Pi0Config(
             pi05=True,
             action_dim=32,  # pi05 is trained with 32-dim actions
             action_horizon=10,
+            discrete_state_input=False,
         ),
         data=LeRobotXVDataConfig(
             # repo_id="/share/chenshuaiwen-local/.cache/hf_home/fastumi/0112",
-            repo_id="local/umi_stock_shelves_0128",
+            repo_id="local/umi_pick_place_cup_0130_eval200",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
@@ -1201,9 +1202,6 @@ _CONFIGS = [
         weight_loader=weight_loaders.CheckpointWeightLoader(
             "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
         ),
-
-        log_interval=500,
-        keep_period=10_000,
 
         num_train_steps=20_000,
         batch_size=16,
