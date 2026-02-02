@@ -12,7 +12,7 @@ def make_franka_example() -> dict:
         "tcp_pose": np.random.rand(7).astype(np.float32),
         "gripper_pose": np.random.rand(1).astype(np.float32),
         "image": np.random.randint(256, size=(240, 420, 3), dtype=np.uint8),
-        "prompt": "do something",
+        "prompt": "do the task",
     }
 
 def _parse_image(image) -> np.ndarray:
@@ -29,14 +29,20 @@ def _parse_image(image) -> np.ndarray:
 
 @dataclasses.dataclass(frozen=True)
 class FrankaInputs(transforms.DataTransformFn):
-    # Determines which model will be used (e.g. PI0 or PI0_FAST)
     model_type: _model.ModelType
 
     def __call__(self, data: dict) -> dict:
         # ---------------------------------------------------------
+        # 0. Print Input Data Keys Shapes
+        # ---------------------------------------------------------
+        # for key, value in data.items():
+        #     print(f"Input key: {key}, shape: {np.asarray(value).shape}")
+        #     if key == "gripper_pose" or key =="prompt" or key =="tcp_pose":
+        #         print(f" {key} value: {value}")
+
+        # ---------------------------------------------------------
         # 1. State Processing
         # ---------------------------------------------------------
-        # State: tcp_pose (7) + gripper_pose (1)
         tcp = np.asarray(data["tcp_pose"])
         gripper = np.asarray(data["gripper_pose"])
         if gripper.ndim == 0: gripper = gripper[None]
@@ -45,11 +51,9 @@ class FrankaInputs(transforms.DataTransformFn):
         # ---------------------------------------------------------
         # 2. Image Processing
         # ---------------------------------------------------------
-        # data["image"] 对应 info.json 的 "observation.images.fish_eye_front"
         base_image = _parse_image(data["image"])
 
-        # Pi0 期望的输入槽位是 base_0_rgb。
-        # 其他槽位 (wrist) 我们用全0填充并 Mask 掉。
+        # 期望的输入槽位是base_0_rgb，其他槽位 (wrist) 用全0填充并Mask掉
         match self.model_type:
             case _model.ModelType.PI0 | _model.ModelType.PI05:
                 names = ("base_0_rgb", "left_wrist_0_rgb", "right_wrist_0_rgb")
@@ -72,19 +76,16 @@ class FrankaInputs(transforms.DataTransformFn):
         }
 
         # ---------------------------------------------------------
-        # 3. Action & Prompt Pass-through
+        # 3. Action Processing
         # ---------------------------------------------------------
         if "actions" in data:
             # 原始动作 (7维)
             raw_actions = np.asarray(data["actions"], dtype=np.float32)
             
-            # 目标维度 32
+            # Padding
             target_dim = 32
             current_dim = raw_actions.shape[-1]
-            
-            # 如果是 (Horizon, 7) 的形状
             if current_dim < target_dim:
-                # 创建全零的 padding: (Horizon, 32-7)
                 padding = np.zeros(
                     raw_actions.shape[:-1] + (target_dim - current_dim,), 
                     dtype=np.float32
@@ -95,6 +96,9 @@ class FrankaInputs(transforms.DataTransformFn):
             else:
                 inputs["actions"] = raw_actions
 
+        # ---------------------------------------------------------
+        # 4. Prompt Processing
+        # ---------------------------------------------------------
         if "prompt" in data:
             if isinstance(data["prompt"], bytes):
                 data["prompt"] = data["prompt"].decode("utf-8")
@@ -105,6 +109,6 @@ class FrankaInputs(transforms.DataTransformFn):
 @dataclasses.dataclass(frozen=True)
 class FrankaOutputs(transforms.DataTransformFn):
     def __call__(self, data: dict) -> dict:
-        # 模型输出是 32 维的，我们只需要前 7 维给机器人
-        # 假设 data["actions"] 是 (Batch, Horizon, 32)
+        # 模型输出是 32 维的，只需要前7维给机器人
+        # 含义：[dx, dy, dz, drx, dry, drz, gripper] (相对于franka base坐标系)
         return {"actions": np.asarray(data["actions"][..., :7])}

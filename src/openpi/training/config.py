@@ -21,8 +21,9 @@ import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
-import openpi.policies.franka_policy as franka_policy
-import openpi.policies.franka_rel_policy as franka_rel_policy
+import openpi.policies.franka_del_policy as franka_del_policy
+import openpi.policies.franka_rel3d_policy as franka_rel3d_policy
+import openpi.policies.franka_rel6d_policy as franka_rel6d_policy
 import openpi.policies.xv_policy as xv_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
@@ -466,7 +467,7 @@ class LeRobotDROIDDataConfig(DataConfigFactory):
         )
 
 @dataclasses.dataclass(frozen=True)
-class LeRobotFrankaDataConfig(DataConfigFactory):
+class LeRobotFrankaDelDataConfig(DataConfigFactory):
     """
     Config for Franka Research 3 dataset in LeRobot format.
     Adapts specific keys from info.json to OpenPi format.
@@ -474,31 +475,27 @@ class LeRobotFrankaDataConfig(DataConfigFactory):
     # 如果数据集中找不到 prompt 列，默认使用这个提示词
     default_prompt: str | None = "do the task"
     
-    # 是否强制将动作转为 Delta。
-    # 你的 info.json 显示 action names 已经是 dx, dy... 所以默认 False。
-    convert_to_delta: bool = False 
-    
     action_sequence_keys: Sequence[str] = ("action",)
 
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
-        # 1. 关键步骤：Key Mapping (RepackTransform)
-        # 左边是代码里用的短名字，右边是你 info.json 里的长名字
+        # 1. Key Mapping (RepackTransform)
+        # 左边是代码里用的短名字，右边是info.json里的长名字
         repack_transform = _transforms.Group(
             inputs=[
                 _transforms.RepackTransform(
                     {
-                        # 图像映射
+                        # 图像映射：(3, 1280, 1280)
                         "image": "observation.images.fish_eye_front",
                         
-                        # 状态映射 (注意这里分别映射，后面 Policy 里再拼接)
+                        # 状态映射：(7,) and (1,)
                         "tcp_pose": "observation.state.tcp_pose",
                         "gripper_pose": "observation.state.gripper_pose",
                         
-                        # 动作映射
+                        # 动作映射：(action_horizon, 7)
                         "actions": "action",
                         
-                        # 提示词 (如果 info.json 里没有 language_instruction，这行可能无效，会用到 default_prompt)
+                        # 提示词 (如果 info.json 里没有，会用default_prompt)
                         "prompt": "prompt", 
                     }
                 )
@@ -507,21 +504,11 @@ class LeRobotFrankaDataConfig(DataConfigFactory):
 
         # 2. 数据处理流水线
         data_transforms = _transforms.Group(
-            inputs=[franka_policy.FrankaInputs(model_type=model_config.model_type)],
-            outputs=[franka_policy.FrankaOutputs()],
+            inputs=[franka_del_policy.FrankaInputs(model_type=model_config.model_type)],
+            outputs=[franka_del_policy.FrankaOutputs()],
         )
 
-        # 3. 动作 Delta 转换 (可选)
-        # 如果你的 parquet 存的是绝对坐标，把这个设为 True
-        if self.convert_to_delta:
-            # 假设前6维是 Pose，第7维是 Gripper
-            delta_action_mask = _transforms.make_bool_mask(6, -1)
-            data_transforms = data_transforms.push(
-                inputs=[_transforms.DeltaActions(delta_action_mask)],
-                outputs=[_transforms.AbsoluteActions(delta_action_mask)],
-            )
-
-        # 4. 模型相关处理 (Resize, Tokenize)
+        # 3. 模型相关处理 (Resize, Tokenize)
         # 这里会自动把图像 Resize 到 224x224
         model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
 
@@ -534,17 +521,13 @@ class LeRobotFrankaDataConfig(DataConfigFactory):
         )
 
 @dataclasses.dataclass(frozen=True)
-class LeRobotFrankaRelDataConfig(DataConfigFactory):
+class LeRobotFrankaRel3dDataConfig(DataConfigFactory):
     """
     Config for Relative Action training.
     Reads BOTH absolute pose sequence AND raw action sequence.
     """
     default_prompt: str | None = "do the task"
     
-    # 告诉 Data Loader 读取两列数据拼成 sequence
-    # 1. observation.state.tcp_pose (7维): 用于计算相对位姿
-    # 2. action (7维): 用于提取 gripper action
-    # 最终 data["actions"] 的形状是 (Batch, Horizon, 14)
     action_sequence_keys: Sequence[str] = (
         "observation.state.tcp_pose", 
         "action"
@@ -557,20 +540,80 @@ class LeRobotFrankaRelDataConfig(DataConfigFactory):
         repack_transform = _transforms.Group(
             inputs=[
                 _transforms.RepackTransform(
-                    {
+                    {   
+                        # 图像映射：(3, 1280, 1280)
                         "image": "observation.images.fish_eye_front",
-                        "prompt": "prompt", 
+
+                        # 状态映射：(action_horizon, 7) and (1,)
                         "tcp_pose": "observation.state.tcp_pose",
-                        "raw_actions": "action",
                         "gripper_pose": "observation.state.gripper_pose",
+
+                        # 动作映射：(action_horizon, 7)
+                        "raw_actions": "action",
+                        
+                        # 提示词 (如果 info.json 里没有，会用default_prompt)
+                        "prompt": "prompt", 
                     }
                 )
             ]
         )
 
         data_transforms = _transforms.Group(
-            inputs=[franka_rel_policy.FrankaRelInputs(model_type=model_config.model_type)],
-            outputs=[franka_rel_policy.FrankaRelOutputs()],
+            inputs=[franka_rel3d_policy.FrankaRelInputs(model_type=model_config.model_type)],
+            outputs=[franka_rel3d_policy.FrankaRelOutputs()],
+        )
+
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+
+        return dataclasses.replace(
+            config,
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=self.action_sequence_keys,
+        )
+
+@dataclasses.dataclass(frozen=True)
+class LeRobotFrankaRel6dDataConfig(DataConfigFactory):
+    """
+    Config for Relative Action training.
+    Reads BOTH absolute pose sequence AND raw action sequence.
+    """
+    default_prompt: str | None = "do the task"
+
+    action_sequence_keys: Sequence[str] = (
+        "observation.state.tcp_pose", 
+        "action"
+    )
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        config = self.create_base_config(assets_dirs, model_config)
+
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {   
+                        # 图像映射：(3, 1280, 1280)
+                        "image": "observation.images.fish_eye_front",
+
+                        # 状态映射：(action_horizon, 7) and (1,)
+                        "tcp_pose": "observation.state.tcp_pose",
+                        "gripper_pose": "observation.state.gripper_pose",
+
+                        # 动作映射：(action_horizon, 7)
+                        "raw_actions": "action",
+                        
+                        # 提示词 (如果 info.json 里没有，会用default_prompt)
+                        "prompt": "prompt", 
+                    }
+                )
+            ]
+        )
+
+        data_transforms = _transforms.Group(
+            inputs=[franka_rel6d_policy.FrankaRelInputs(model_type=model_config.model_type)],
+            outputs=[franka_rel6d_policy.FrankaRelOutputs()],
         )
 
         model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
@@ -1085,17 +1128,14 @@ _CONFIGS = [
     # Fine-tuning Franka configs.
     #
     TrainConfig(
-        name="pi05_franka_finetune",
+        name="pi05_franka_del_finetune",
         
         # 使用 Pi0.5 配置
-        # pi05=True
-        # action_dim=7: 对应你的 features.action.shape [7]
-        # action_horizon=10: 一次预测未来 10 步 (可根据需要调整)
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         
-        data=LeRobotFrankaDataConfig(
+        data=LeRobotFrankaDelDataConfig(
             # 你的数据集路径 (对应 LEROBOT_HOME 下的 local/franka_pick_place_0112)
-            repo_id="local/franka_pick_place_cubes_0125_v1", 
+            repo_id="local/franka_stock_shelves_0201", 
             
             # 尝试从 Task Description 中获取 Prompt
             base_config=DataConfig(prompt_from_task=True),
@@ -1114,13 +1154,14 @@ _CONFIGS = [
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
 
+
     TrainConfig(
-        name="pi05_franka_rel_finetune",
-        # Pi0.5 配置
+        name="pi05_franka_rel3d_finetune",
+
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         
-        data=LeRobotFrankaRelDataConfig(
-            repo_id="local/franka_pick_place_0121",
+        data=LeRobotFrankaRel3dDataConfig(
+            repo_id="local/franka_stock_shelves_0201",
             base_config=DataConfig(prompt_from_task=True),
         ),
         
@@ -1136,12 +1177,12 @@ _CONFIGS = [
     ),
 
     TrainConfig(
-        name="pi05_franka_rel_finetune_test1",
-        # Pi0.5 配置
+        name="pi05_franka_rel6d_finetune",
+
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         
-        data=LeRobotFrankaRelDataConfig(
-            repo_id="local/umi_pick_place_cubes_0128",
+        data=LeRobotFrankaRel6dDataConfig(
+            repo_id="local/franka_stock_shelves_0201",
             base_config=DataConfig(prompt_from_task=True),
         ),
         
@@ -1151,7 +1192,7 @@ _CONFIGS = [
         
         num_train_steps=20_000,
         batch_size=16,
-        save_interval=1000,
+        save_interval=2000,
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
