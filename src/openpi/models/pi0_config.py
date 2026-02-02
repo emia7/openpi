@@ -37,6 +37,8 @@ class Pi0Config(_model.BaseModelConfig):
             object.__setattr__(self, "max_token_len", 200 if self.pi05 else 48)
         if self.discrete_state_input is None:
             object.__setattr__(self, "discrete_state_input", self.pi05)
+        
+        # print(f"Pi0Config initialized with pi05={self.pi05}, action_horizon={self.action_horizon}, discrete_state_input={self.discrete_state_input}")
 
     @property
     @override
