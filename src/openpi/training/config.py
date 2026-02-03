@@ -1182,7 +1182,9 @@ _CONFIGS = [
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         
         data=LeRobotFrankaRel6dDataConfig(
-            repo_id="local/franka_stock_shelves_0201",
+            # repo_id="local/franka_stock_shelves_0201",
+            # repo_id="local/franka_pick_place_cup_0202_eval100",
+            repo_id="local/franka_stock_shelves_0202_eval100",
             base_config=DataConfig(prompt_from_task=True),
         ),
         
@@ -1231,11 +1233,11 @@ _CONFIGS = [
             pi05=True,
             action_dim=32,  # pi05 is trained with 32-dim actions
             action_horizon=10,
-            discrete_state_input=False,
+            discrete_state_input=False, # 无state输入!!
         ),
         data=LeRobotXVDataConfig(
-            # repo_id="/share/chenshuaiwen-local/.cache/hf_home/fastumi/0112",
-            repo_id="local/umi_pick_place_cup_0130_eval200",
+            # repo_id="local/umi_stock_shelves_0202_eval200", # 上货任务
+            repo_id="local/umi_pick_place_cup_0130_eval100", # 拿放杯子任务
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
