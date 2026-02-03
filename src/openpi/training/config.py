@@ -1126,12 +1126,20 @@ _CONFIGS = [
 
     #
     # Fine-tuning Franka configs.
-    #
+    # 
+
+    # pi05_franka_del3d_finetune
+    # input: image + abs state(8d with 4d quant) 
+    # output: delta action(7d with 3d rot)
     TrainConfig(
         name="pi05_franka_del_finetune",
         
         # 使用 Pi0.5 配置
-        model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
+        model=pi0_config.Pi0Config(
+            pi05=True, 
+            action_dim=32, 
+            action_horizon=10
+            ),
         
         data=LeRobotFrankaDelDataConfig(
             # 你的数据集路径 (对应 LEROBOT_HOME 下的 local/franka_pick_place_0112)
@@ -1154,11 +1162,17 @@ _CONFIGS = [
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
 
-
+    # pi05_franka_rel3d_finetune
+    # input: image + abs state(8d with 4d quant) 
+    # output: relative action(7d with 3d rot)
     TrainConfig(
         name="pi05_franka_rel3d_finetune",
 
-        model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
+        model=pi0_config.Pi0Config(
+            pi05=True, 
+            action_dim=32, 
+            action_horizon=10
+            ),
         
         data=LeRobotFrankaRel3dDataConfig(
             repo_id="local/franka_stock_shelves_0201",
@@ -1176,14 +1190,24 @@ _CONFIGS = [
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
 
+    # **pi05_franka_rel6d_finetune
+    # input: image + abs state(8d with 4d quant) 
+    # output: relative action(10d with 6d rot)    
     TrainConfig(
         name="pi05_franka_rel6d_finetune",
 
-        model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
+        model=pi0_config.Pi0Config(
+            pi05=True, 
+            action_dim=32, 
+            action_horizon=10
+            ),
         
         data=LeRobotFrankaRel6dDataConfig(
-            # repo_id="local/franka_stock_shelves_0201",
+            # for pick-place-cup task
             # repo_id="local/franka_pick_place_cup_0202_eval100",
+
+            # for stock-shelves task
+            # repo_id="local/franka_stock_shelves_0201_eval50",
             repo_id="local/franka_stock_shelves_0202_eval100",
             base_config=DataConfig(prompt_from_task=True),
         ),
@@ -1198,7 +1222,71 @@ _CONFIGS = [
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
-    
+
+    # **pi05_franka_rel6d_image_only_finetune
+    # input: image
+    # output: relative action(10d with 6d rot)    
+    TrainConfig(
+        name="pi05_franka_rel6d_image_only_finetune",
+
+        model=pi0_config.Pi0Config(
+            pi05=True, 
+            action_dim=32, 
+            action_horizon=10,
+            discrete_state_input=False # 无state输入!!
+            ),
+        
+        data=LeRobotFrankaRel6dDataConfig(
+            # for pick-place-cup task
+            repo_id="local/franka_pick_place_cup_0202_eval100",
+
+            # for stock-shelves task
+            # repo_id="local/franka_stock_shelves_0201_eval50",
+            # repo_id="local/franka_stock_shelves_0202_eval100",
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+        
+        num_train_steps=20_000,
+        batch_size=16,
+        save_interval=2000,
+        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+        assets_base_dir="/share/guqiuyi-local/assets",
+    ),
+
+    # **pi05_umi_rel6d_image_only_finetune
+    # input: image
+    # output: relative action(10d with 6d rot) 
+    TrainConfig(
+        name="pi05_umi_rel6d_image_only_finetune",
+        model=pi0_config.Pi0Config(
+            pi05=True,
+            action_dim=32,  # pi05 is trained with 32-dim actions
+            action_horizon=10,
+            discrete_state_input=False # 无state输入!!
+        ),
+        data=LeRobotXVDataConfig(
+            # repo_id="local/umi_stock_shelves_0202_eval200", # 上货任务
+            repo_id="local/umi_pick_place_cup_0130_eval100", # 拿放杯子任务
+            base_config=DataConfig(
+                prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+
+        num_train_steps=20_000,
+        batch_size=16,
+        save_interval=2000,
+        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+        assets_base_dir="/share/guqiuyi-local/assets",
+    ),
+
+    # pi05_xv_finetune
     TrainConfig(
         name="pi05_xv_finetune",
         model=pi0_config.Pi0Config(
@@ -1222,32 +1310,6 @@ _CONFIGS = [
 
         num_train_steps=30_000,
         batch_size=32,
-        save_interval=2000,
-        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
-        assets_base_dir="/share/guqiuyi-local/assets",
-    ),
-
-    TrainConfig(
-        name="pi05_umi_finetune",
-        model=pi0_config.Pi0Config(
-            pi05=True,
-            action_dim=32,  # pi05 is trained with 32-dim actions
-            action_horizon=10,
-            discrete_state_input=False, # 无state输入!!
-        ),
-        data=LeRobotXVDataConfig(
-            # repo_id="local/umi_stock_shelves_0202_eval200", # 上货任务
-            repo_id="local/umi_pick_place_cup_0130_eval100", # 拿放杯子任务
-            base_config=DataConfig(
-                prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
-            ),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader(
-            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
-        ),
-
-        num_train_steps=20_000,
-        batch_size=16,
         save_interval=2000,
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
