@@ -19,7 +19,7 @@ def _parse_image(image) -> np.ndarray:
 
 
 @dataclasses.dataclass(frozen=True)
-class XVInputs(transforms.DataTransformFn):
+class UMIInputs(transforms.DataTransformFn):
 
     model_type: _model.ModelType
     action_dim: int                  # should be 11 for your setup
@@ -137,7 +137,7 @@ class XVInputs(transforms.DataTransformFn):
         return inputs
     
 @dataclasses.dataclass(frozen=True)
-class XVOutputs(transforms.DataTransformFn):
+class UMIOutputs(transforms.DataTransformFn):
     """
     Inference-only:
     model output (H,11):

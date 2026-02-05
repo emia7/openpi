@@ -643,13 +643,20 @@ class LeRobotXVDataConfig(DataConfigFactory):
         repack_transform = _transforms.Group(
             inputs=[
                 _transforms.RepackTransform(
-                    {
+                    {   
+                        # 图像映射：(3, 1280, 1280)
                         "image": "image",
+
+                        # # 状态映射
                         "eef_pos": "eef_pos",
                         "eef_rot_axis_angle": "eef_rot_axis_angle",
                         "gripper_width": "gripper_width",
                         "demo_start_pose": "demo_start_pose",
+
+                        # 动作映射
                         "actions": "actions",
+
+                        # 提示词
                         "task": "task",
                     }
                 )
@@ -660,6 +667,7 @@ class LeRobotXVDataConfig(DataConfigFactory):
             inputs=[xv_policy.XVInputs(model_type=model_config.model_type, action_dim=model_config.action_dim, action_horizon=model_config.action_horizon)],
             outputs=[xv_policy.XVOutputs()],
         )
+
         model_transforms = ModelTransformFactory()(model_config)
 
         return dataclasses.replace(
@@ -1204,11 +1212,16 @@ _CONFIGS = [
         
         data=LeRobotFrankaRel6dDataConfig(
             # for pick-place-cup task
+            # repo_id="local/franka_pick_place_cup_0202_eval50",
             # repo_id="local/franka_pick_place_cup_0202_eval100",
 
             # for stock-shelves task
             # repo_id="local/franka_stock_shelves_0201_eval50",
-            repo_id="local/franka_stock_shelves_0202_eval100",
+            # repo_id="local/franka_stock_shelves_0202_eval100",
+
+            # for open-laptop task
+            repo_id="local/franka_open_laptop_0204_eval50",
+            # repo_id="local/franka_open_laptop_0204_eval100",   
             base_config=DataConfig(prompt_from_task=True),
         ),
         
@@ -1238,11 +1251,16 @@ _CONFIGS = [
         
         data=LeRobotFrankaRel6dDataConfig(
             # for pick-place-cup task
-            repo_id="local/franka_pick_place_cup_0202_eval100",
+            # repo_id="local/franka_pick_place_cup_0202_eval50",
+            # repo_id="local/franka_pick_place_cup_0202_eval100",
 
             # for stock-shelves task
             # repo_id="local/franka_stock_shelves_0201_eval50",
             # repo_id="local/franka_stock_shelves_0202_eval100",
+
+            # for open-laptop task
+            repo_id="local/franka_open_laptop_0204_eval50",
+            # repo_id="local/franka_open_laptop_0204_eval100",        
             base_config=DataConfig(prompt_from_task=True),
         ),
         
@@ -1269,8 +1287,20 @@ _CONFIGS = [
             discrete_state_input=False # 无state输入!!
         ),
         data=LeRobotXVDataConfig(
-            # repo_id="local/umi_stock_shelves_0202_eval200", # 上货任务
-            repo_id="local/umi_pick_place_cup_0130_eval100", # 拿放杯子任务
+            # for pick-place-cup task
+            # repo_id="local/umi_pick_place_cup_0130_eval100",
+            # repo_id="local/umi_pick_place_cup_0130_eval200",
+            # repo_id="local/umi_pick_place_cup_0130_eval400",
+
+            # for stock-shelves task
+            # repo_id="local/umi_stock_shelves_0202_eval200",
+            # repo_id="local/umi_stock_shelves_0202_eval300",
+            repo_id="local/umi_stock_shelves_0202_eval400",
+
+            # for open-laptop task
+            # repo_id="local/umi_open_laptop_0131_eval100",
+            # repo_id="local/umi_open_laptop_0131_eval200",
+            # repo_id="local/umi_open_laptop_0131_eval400",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),

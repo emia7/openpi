@@ -301,7 +301,7 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     # Accept multiple directories
     p.add_argument("--input_dirs", nargs='+', required=True, help="List of directories containing episodeXXXXX.mp4/json")
-    p.add_argument("--repo", required=True, help="Output LeRobot repo name")
+    p.add_argument("--repo_id", required=True, help="Output LeRobot repo name")
     p.add_argument("--robot_type", default="XV")
     p.add_argument("--target_fps", type=float, default=10.0, help="Downsample target fps, e.g. 10")
     p.add_argument("--task", type=str, default="put the purple cup into the plate")
@@ -313,7 +313,7 @@ if __name__ == "__main__":
 
     main(
         input_dirs=args.input_dirs,
-        repo_name=args.repo,
+        repo_name=args.repo_id,
         robot_type=args.robot_type,
         target_fps=args.target_fps,
         task_text=args.task,
