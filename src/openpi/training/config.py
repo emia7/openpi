@@ -1291,16 +1291,18 @@ _CONFIGS = [
             # repo_id="local/umi_pick_place_cup_0130_eval100",
             # repo_id="local/umi_pick_place_cup_0130_eval200",
             # repo_id="local/umi_pick_place_cup_0130_eval400",
+            # repo_id="local/umi_pick_place_cup_0208_eval100",
+            repo_id="local/umi_pick_place_cup_0208_eval200",
 
             # for stock-shelves task
             # repo_id="local/umi_stock_shelves_0202_eval200",
             # repo_id="local/umi_stock_shelves_0202_eval300",
-            repo_id="local/umi_stock_shelves_0202_eval400",
+            # repo_id="local/umi_stock_shelves_0202_eval400",
 
             # for open-laptop task
-            # repo_id="local/umi_open_laptop_0131_eval100",
-            # repo_id="local/umi_open_laptop_0131_eval200",
-            # repo_id="local/umi_open_laptop_0131_eval400",
+            # repo_id="local/umi_open_laptop_0208_eval200",
+            # repo_id="local/umi_open_laptop_0208_eval300",
+            # repo_id="local/umi_open_laptop_0208_eval400",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
