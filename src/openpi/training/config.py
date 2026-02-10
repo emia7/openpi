@@ -1291,8 +1291,10 @@ _CONFIGS = [
             # repo_id="local/umi_pick_place_cup_0130_eval100",
             # repo_id="local/umi_pick_place_cup_0130_eval200",
             # repo_id="local/umi_pick_place_cup_0130_eval400",
-            # repo_id="local/umi_pick_place_cup_0208_eval100",
-            repo_id="local/umi_pick_place_cup_0208_eval200",
+            # repo_id="local/umi_pick_place_cup_0208_eval100", # 224 episodes by long too fast
+            # repo_id="local/umi_pick_place_cup_0208_eval200", # 224 episodes by long too fast
+            # repo_id = "local/umi_pick_place_cup_0121", # 200 episodes by csw 
+            repo_id = "local/umi_pick_place_cup_0209_eval100", # 100 episodes by long
 
             # for stock-shelves task
             # repo_id="local/umi_stock_shelves_0202_eval200",
