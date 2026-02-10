@@ -82,7 +82,8 @@ class UMIInputs(transforms.DataTransformFn):
         rel_obs_pose10d = mat_to_pose10d(rel_obs_pose_mat)  # (9,)
         rel_obs_rot6d = rel_obs_pose10d[3:]  # (6,)
 
-        inputs["state"] = rel_obs_rot6d  # model_transforms will PadStatesAndActions(action_dim)
+        # inputs["state"] = rel_obs_rot6d  # model_transforms will PadStatesAndActions(action_dim)
+        inputs["state"] = np.concatenate([pos_cur, rot_cur], axis=-1)
 
         # --------------------------
         # 3) action chunk: raw abs 7D -> relative pose10d + gripper (H,11)
@@ -123,7 +124,8 @@ class UMIInputs(transforms.DataTransformFn):
             # 实际上 10 维
             act11 = np.concatenate([action_pose, action_gripper], axis=-1).astype(np.float32)
 
-            inputs["actions"] = act11
+            # inputs["actions"] = act11
+            inputs["actions"] = raw_actions
 
                 # --------------------------
         # 4) prompt
@@ -165,4 +167,5 @@ class UMIOutputs(transforms.DataTransformFn):
         pose6d = mat_to_pose6(mat)
         action_7d = np.concatenate([pose6d,gripper], axis=-1).astype(np.float32)
 
-        return {"actions": action_7d}        # (H,7)
+        # return {"actions": action_7d}        # (H,7)
+        return {"actions": act}

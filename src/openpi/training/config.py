@@ -1213,14 +1213,14 @@ _CONFIGS = [
         data=LeRobotFrankaRel6dDataConfig(
             # for pick-place-cup task
             # repo_id="local/franka_pick_place_cup_0202_eval50",
-            # repo_id="local/franka_pick_place_cup_0202_eval100",
+            repo_id="local/franka_pick_place_cup_0202_eval100",
 
             # for stock-shelves task
             # repo_id="local/franka_stock_shelves_0201_eval50",
             # repo_id="local/franka_stock_shelves_0202_eval100",
 
             # for open-laptop task
-            repo_id="local/franka_open_laptop_0204_eval50",
+            # repo_id="local/franka_open_laptop_0204_eval50",
             # repo_id="local/franka_open_laptop_0204_eval100",   
             base_config=DataConfig(prompt_from_task=True),
         ),
@@ -1252,14 +1252,14 @@ _CONFIGS = [
         data=LeRobotFrankaRel6dDataConfig(
             # for pick-place-cup task
             # repo_id="local/franka_pick_place_cup_0202_eval50",
-            # repo_id="local/franka_pick_place_cup_0202_eval100",
+            repo_id="local/franka_pick_place_cup_0202_eval100",
 
             # for stock-shelves task
             # repo_id="local/franka_stock_shelves_0201_eval50",
             # repo_id="local/franka_stock_shelves_0202_eval100",
 
             # for open-laptop task
-            repo_id="local/franka_open_laptop_0204_eval50",
+            # repo_id="local/franka_open_laptop_0204_eval50",
             # repo_id="local/franka_open_laptop_0204_eval100",        
             base_config=DataConfig(prompt_from_task=True),
         ),
@@ -1291,8 +1291,9 @@ _CONFIGS = [
             # repo_id="local/umi_pick_place_cup_0130_eval100",
             # repo_id="local/umi_pick_place_cup_0130_eval200",
             # repo_id="local/umi_pick_place_cup_0130_eval400",
+
             # repo_id="local/umi_pick_place_cup_0208_eval100",
-            repo_id="local/umi_pick_place_cup_0208_eval200",
+            # repo_id="local/umi_pick_place_cup_0208_eval200",
 
             # for stock-shelves task
             # repo_id="local/umi_stock_shelves_0202_eval200",
@@ -1300,7 +1301,7 @@ _CONFIGS = [
             # repo_id="local/umi_stock_shelves_0202_eval400",
 
             # for open-laptop task
-            # repo_id="local/umi_open_laptop_0208_eval200",
+            repo_id="local/umi_open_laptop_0208_eval200",
             # repo_id="local/umi_open_laptop_0208_eval300",
             # repo_id="local/umi_open_laptop_0208_eval400",
             base_config=DataConfig(
