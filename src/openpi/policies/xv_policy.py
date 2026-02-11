@@ -4,7 +4,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 from openpi import transforms
-from openpi.policies.pose_util import pose6_to_mat, mat_to_pose10d, mat_to_pose6,pos_rot_to_mat,pose10d_to_mat
+from openpi.policies.pose_util import pose6_to_mat, mat_to_pose10d, mat_to_pose6, pose10d_to_mat
 from openpi.policies.pose_repr_util import convert_pose_mat_rep
 from openpi.models import model as _model
 

@@ -121,7 +121,6 @@ def main(_):
     features = {
         "observation.state.tcp_pose": {"dtype": "float32", "shape": (7,), "names": ["x", "y", "z", "qx", "qy", "qz", "qw"]},
         "observation.state.gripper_pose": {"dtype": "float32", "shape": (1,), "names": ["gripper"]},
-        "observation.state.demo_start_tcp_pose": {"dtype": "float32", "shape": (7,), "names": ["x", "y", "z", "qx", "qy", "qz", "qw"]},
         "action": {"dtype": "float32", "shape": (7,), "names": ["dx", "dy", "dz", "drx", "dry", "drz", "gripper"]},
         "task_idx": {"dtype": "int64", "shape": (1,), "names": None},
         "subtask_idx": {"dtype": "int64", "shape": (1,), "names": None},
@@ -155,14 +154,6 @@ def main(_):
         meta = ep["meta"]
         action_scale = meta["action_scale"]
         
-        # Extract Demo Start Pose (from first frame)
-        if len(df) > 0:
-            demo_start_tcp_pose = np.array(df.iloc[0]["observation/state/tcp_pose"], dtype=np.float32)
-        else:
-            # Fallback for empty episode (should be skipped, but for safety)
-            demo_start_tcp_pose = np.zeros(7, dtype=np.float32)
-            print(f"[WARN] Empty dataframe for {ep['base_name']}, using zero start pose.")
-        
         video_caps = {}
         for cam in cameras:
             vid_path = os.path.join(ep["dir"], f"{ep['base_name']}_{cam}.mp4")
@@ -180,7 +171,6 @@ def main(_):
             frame = {
                 "observation.state.tcp_pose": tcp_pose,
                 "observation.state.gripper_pose": gripper_pose,
-                "observation.state.demo_start_tcp_pose": demo_start_tcp_pose,
                 "action": scaled_action,
                 "task_idx": np.array([int(row.get("task_idx", 0))], dtype=np.int64),
                 "subtask_idx": np.array([int(row.get("subtask_idx", 0))], dtype=np.int64),

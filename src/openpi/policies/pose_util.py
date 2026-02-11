@@ -2,6 +2,7 @@ import numpy as np
 import scipy.spatial.transform as st
 from scipy.spatial.transform import Rotation as R
 
+# 3d pos + 3d rot <-> 4*4 matrix
 def pos_rot_to_mat(pos, rot):
     shape = pos.shape[:-1]
     mat = np.zeros(shape + (4,4), dtype=pos.dtype)
@@ -16,6 +17,7 @@ def mat_to_pos_rot(mat):
     return pos, rot
 
 
+# 3d pos + 3d rot <-> 6d pose
 def pos_rot_to_pose6(pos, rot):
     shape = pos.shape[:-1]
     pose = np.zeros(shape+(6,), dtype=pos.dtype)
@@ -28,12 +30,16 @@ def pose6_to_pos_rot(pose):
     rot = st.Rotation.from_rotvec(pose[...,3:])
     return pos, rot
 
+
+# 6d pose <-> 4*4 matrix
 def pose6_to_mat(pose):
     return pos_rot_to_mat(*pose6_to_pos_rot(pose))
 
 def mat_to_pose6(mat):
     return pos_rot_to_pose6(*mat_to_pos_rot(mat))   
 
+
+# 对一个6d pose应用一个变换矩阵tx, 通常用于坐标系转换
 def transform_pose(tx, pose):
     """
     tx: tx_new_old
@@ -45,9 +51,11 @@ def transform_pose(tx, pose):
     tf_pose = mat_to_pose6(tf_pose_mat)
     return tf_pose
 
+# 对3D点应用刚体变换（旋转+平移）
 def transform_point(tx, point):
     return point @ tx[:3,:3].T + tx[:3,3]
 
+# 相机投影,将3D点投影到2D像素平面
 def project_point(k, point):
     x = point @ k.T
     uv = x[...,:2] / x[...,[2]]
@@ -116,9 +124,23 @@ def pose10d_to_mat(d10):
     out[...,3,3] = 1
     return out
 
-
+# 将 7d pose(3d pos + 4d quant)转换为3d pos + 3d rot
 def pose7_to_pos_rotvec(pose7: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     pos = pose7[:3].astype(np.float32)
     quat = pose7[3:7].astype(np.float32)  # (qx,qy,qz,qw)
     rotvec = R.from_quat(quat).as_rotvec().astype(np.float32)  # axis-angle vec
     return pos, rotvec
+
+def pose7_to_mat(pose7: np.ndarray) -> np.ndarray:
+    """
+    将 7维位姿 [x, y, z, qx, qy, qz, qw] 转换为 4x4 变换矩阵。
+    支持 Batch/Sequence 维度。
+    """
+    pos = pose7[..., :3]
+    quat = pose7[..., 3:] # [qx, qy, qz, qw]
+    
+    # 创建 Rotation 对象
+    rot = R.from_quat(quat)
+    
+    # 调用 pose_util 中的基础函数合成矩阵
+    return pos_rot_to_mat(pos, rot)

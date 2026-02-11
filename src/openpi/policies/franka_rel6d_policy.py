@@ -172,14 +172,14 @@ class FrankaRelInputs(transforms.DataTransformFn):
 @dataclasses.dataclass(frozen=True)
 class FrankaRelOutputs(transforms.DataTransformFn):
     def __call__(self, data: dict) -> dict:
-        # Model Output (32D) -> 切片前 10D -> 解码 -> 7D Delta
+        # Model Output (32D) -> 切片前 10D -> 解码 -> 7D
         act = np.asarray(data["actions"], dtype=np.float32)
         
         # 切片: 9D Pose + 1D Gripper
         pose_rot6d = act[..., :9]
         gripper = act[..., 9:10]
         
-        # 解码: 9D -> Matrix -> 6D Delta (Pos + RotVec)
+        # 解码: 9D -> Matrix -> 6D (Pos + RotVec)
         pose_mat = pose10d_to_mat(pose_rot6d)
         pose_6d = mat_to_pose6(pose_mat) # [dx, dy, dz, drx, dry, drz]
         

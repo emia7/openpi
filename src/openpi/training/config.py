@@ -21,6 +21,8 @@ import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
 import openpi.policies.libero_policy as libero_policy
+from openpi.policies import franka_hybrid_policy
+from openpi.policies import umi_hybrid_policy
 import openpi.policies.franka_del_policy as franka_del_policy
 import openpi.policies.franka_rel3d_policy as franka_rel3d_policy
 import openpi.policies.franka_rel6d_policy as franka_rel6d_policy
@@ -457,6 +459,156 @@ class LeRobotDROIDDataConfig(DataConfigFactory):
             inputs=[droid_policy.DroidInputs(model_type=model_config.model_type)],
             outputs=[droid_policy.DroidOutputs()],
         )
+        model_transforms = ModelTransformFactory()(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+        )
+
+# --------------------------------------------------------------------------
+# Mode 1 Config: Franka Relative
+# --------------------------------------------------------------------------
+@dataclasses.dataclass(frozen=True)
+class LeRobotFrankaRelDataConfig(DataConfigFactory):
+    default_prompt: str | None = "do the task"
+
+    action_sequence_keys: Sequence[str] = (
+        "observation.state.tcp_pose", 
+        "action"
+    )
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        config = self.create_base_config(assets_dirs, model_config)
+
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                {
+                    # 图像映射：(3, 1280, 1280)
+                    "image": "observation.images.fish_eye_front",
+
+                    # 状态映射：(7,) (action_horizon, 7) and (1,)
+                    "demo_start_tcp_pose": "observation.state.demo_start_tcp_pose",
+                    "tcp_pose": "observation.state.tcp_pose",
+                    "gripper_pose": "observation.state.gripper_pose",
+
+                    # 动作映射：(action_horizon, 7)
+                    "raw_actions": "action",
+
+                    # 提示词 (如果 info.json 里没有，会用default_prompt)
+                    "prompt": "prompt", 
+                }
+                )
+            ]
+        )
+
+        data_transforms = _transforms.Group(
+            inputs=[franka_hybrid_policy.FrankaRelInputs(model_type=model_config.model_type)],
+            outputs=[franka_hybrid_policy.FrankaRelOutputs()],
+        )
+
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+        
+        return dataclasses.replace(
+            config,
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=self.action_sequence_keys,
+        )
+
+# --------------------------------------------------------------------------
+# Mode 2 Config: Absolute
+# --------------------------------------------------------------------------
+@dataclasses.dataclass(frozen=True)
+class LeRobotFrankaAbsDataConfig(DataConfigFactory):
+    default_prompt: str | None = "do the task"
+
+    action_sequence_keys: Sequence[str] = (
+        "observation.state.tcp_pose", 
+        "action"
+    )
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        config = self.create_base_config(assets_dirs, model_config)
+
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                {
+                    # 图像映射：(3, 1280, 1280)
+                    "image": "observation.images.fish_eye_front",
+
+                    # 状态映射：(action_horizon, 7) and (1,)
+                    "tcp_pose": "observation.state.tcp_pose",
+                    "gripper_pose": "observation.state.gripper_pose",
+
+                    # 动作映射：(action_horizon, 7)
+                    "raw_actions": "action",
+
+                    # 提示词 (如果 info.json 里没有，会用default_prompt)
+                    "prompt": "prompt", 
+                }
+                )
+            ]
+        )
+
+        data_transforms = _transforms.Group(
+            inputs=[franka_hybrid_policy.FrankaAbsInputs(model_type=model_config.model_type)],
+            outputs=[franka_hybrid_policy.FrankaAbsOutputs()],
+        )
+
+        model_transforms = ModelTransformFactory(default_prompt=self.default_prompt)(model_config)
+
+        return dataclasses.replace(
+            config,
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=self.action_sequence_keys,
+        )
+
+# --------------------------------------------------------------------------
+# Mode 3 Config: UMI Relative
+# --------------------------------------------------------------------------
+@dataclasses.dataclass(frozen=True)
+class LeRobotUMIRelDataConfig(DataConfigFactory):
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {   
+                        # 图像映射：(3, 1280, 1280)
+                        "image": "image",
+
+                        # # 状态映射
+                        "eef_pos": "eef_pos",
+                        "eef_rot_axis_angle": "eef_rot_axis_angle",
+                        "gripper_width": "gripper_width",
+                        "demo_start_pose": "demo_start_pose",
+
+                        # 动作映射
+                        "actions": "actions",
+
+                        # 提示词
+                        "task": "task",
+                    }
+                )
+            ]
+        )
+        # We assume joint *velocity* actions, so we should *not* apply an additional delta transform.
+        data_transforms = _transforms.Group(
+            inputs=[umi_hybrid_policy.UMIRelInputs(model_type=model_config.model_type, action_horizon=model_config.action_horizon)],
+            outputs=[umi_hybrid_policy.UMIRelOutputs()],
+        )
+
         model_transforms = ModelTransformFactory()(model_config)
 
         return dataclasses.replace(
@@ -1136,7 +1288,7 @@ _CONFIGS = [
     # Fine-tuning Franka Teleop configs.
     # 
 
-    # pi05_franka_del3d_finetune
+    # pi05_franka_del_finetune
     # input: image + absolute state(8d with 4d quant) 
     # output: delta action(7d with 3d rot)
     # franka_del_policy.py
@@ -1201,7 +1353,7 @@ _CONFIGS = [
     ),
 
     # pi05_franka_rel6d_finetune
-    # input: image + absolute state(8d with 4d quant) 
+    # input: image + absolute state(8d with 4d quant)
     # output: relative action(10d with 6d rot)    
     # franka_rel6d_policy.py
     TrainConfig(
@@ -1241,11 +1393,45 @@ _CONFIGS = [
 
     # **pi05_franka_abs6d_abs6d_finetune
     # input: image + absolute state(10d with 6d rot)
-    # output: absolute action(10d with 6d rot) 
+    # output: absolute action(10d with 6d rot)
+    TrainConfig(
+        name="pi05_franka_abs6d_abs6d_finetune",
+        model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
+        data=LeRobotFrankaAbsDataConfig(
+            repo_id="local/franka_pick_place_0118", 
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+        
+        num_train_steps=20_000,
+        batch_size=16,
+        save_interval=2000,
+        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+        assets_base_dir="/share/guqiuyi-local/assets",
+    ),
 
     # **pi05_franka_rel6d_rel6d_finetune
     # input: image + relative state(10d with 6d rot)
     # output: relative action(10d with 6d rot) 
+    TrainConfig(
+        name="pi05_franka_rel6d_rel6d_finetune",
+        model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
+        data=LeRobotFrankaRelDataConfig(
+            repo_id="local/franka_pick_place_0118", 
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+        
+        num_train_steps=20_000,
+        batch_size=16,
+        save_interval=2000,
+        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+        assets_base_dir="/share/guqiuyi-local/assets",
+    ),
 
     # **pi05_franka_rel6d_image_only_finetune
     # input: image
@@ -1330,8 +1516,8 @@ _CONFIGS = [
             # repo_id="local/umi_open_laptop_0208_eval200",
             # repo_id="local/umi_open_laptop_0208_eval300",
             # repo_id="local/umi_open_laptop_0208_eval400",
-            # repo_id="local/umi_open_laptop_0210_eval200_image", # 0204_100episodes + 0205_100episodes
-            repo_id="local/umi_open_laptop_0211_eval200_image", # 0206_200episodes
+            repo_id="local/umi_open_laptop_0210_eval200_image", # 0204_100episodes + 0205_100episodes
+            # repo_id="local/umi_open_laptop_0211_eval200_image", # 0206_200episodes
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
