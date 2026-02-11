@@ -1133,12 +1133,13 @@ _CONFIGS = [
     ),
 
     #
-    # Fine-tuning Franka configs.
+    # Fine-tuning Franka Teleop configs.
     # 
 
     # pi05_franka_del3d_finetune
-    # input: image + abs state(8d with 4d quant) 
+    # input: image + absolute state(8d with 4d quant) 
     # output: delta action(7d with 3d rot)
+    # franka_del_policy.py
     TrainConfig(
         name="pi05_franka_del_finetune",
         
@@ -1171,8 +1172,9 @@ _CONFIGS = [
     ),
 
     # pi05_franka_rel3d_finetune
-    # input: image + abs state(8d with 4d quant) 
+    # input: image + absolute state(8d with 4d quant) 
     # output: relative action(7d with 3d rot)
+    # franka_rel3d_policy.py
     TrainConfig(
         name="pi05_franka_rel3d_finetune",
 
@@ -1198,9 +1200,10 @@ _CONFIGS = [
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
 
-    # **pi05_franka_rel6d_finetune
-    # input: image + abs state(8d with 4d quant) 
+    # pi05_franka_rel6d_finetune
+    # input: image + absolute state(8d with 4d quant) 
     # output: relative action(10d with 6d rot)    
+    # franka_rel6d_policy.py
     TrainConfig(
         name="pi05_franka_rel6d_finetune",
 
@@ -1236,9 +1239,18 @@ _CONFIGS = [
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
 
+    # **pi05_franka_abs6d_abs6d_finetune
+    # input: image + absolute state(10d with 6d rot)
+    # output: absolute action(10d with 6d rot) 
+
+    # **pi05_franka_rel6d_rel6d_finetune
+    # input: image + relative state(10d with 6d rot)
+    # output: relative action(10d with 6d rot) 
+
     # **pi05_franka_rel6d_image_only_finetune
     # input: image
-    # output: relative action(10d with 6d rot)    
+    # output: relative action(10d with 6d rot)
+    # franka_rel6d_policy.py 
     TrainConfig(
         name="pi05_franka_rel6d_image_only_finetune",
 
@@ -1275,6 +1287,18 @@ _CONFIGS = [
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
 
+    #
+    # Fine-tuning FastUMI configs.
+    # 
+
+    # **pi05_umi_abs6d_abs6d_finetune
+    # input: image + absolute state(10d with 6d rot)
+    # output: absolute action(10d with 6d rot) 
+
+    # **pi05_umi_rel6d_rel6d_finetune
+    # input: image + relative state(10d with 6d rot) 
+    # output: relative action(10d with 6d rot) 
+
     # **pi05_umi_rel6d_image_only_finetune
     # input: image
     # output: relative action(10d with 6d rot) 
@@ -1288,13 +1312,14 @@ _CONFIGS = [
         ),
         data=LeRobotXVDataConfig(
             # for pick-place-cup task
-            # repo_id="local/umi_pick_place_cup_0130_eval100",
-            # repo_id="local/umi_pick_place_cup_0130_eval200",
-            # repo_id="local/umi_pick_place_cup_0130_eval400",
-            # repo_id="local/umi_pick_place_cup_0208_eval100", # 224 episodes by long too fast
-            # repo_id="local/umi_pick_place_cup_0208_eval200", # 224 episodes by long too fast
+            # repo_id="local/umi_pick_place_cup_0130_eval100", # mix csw and long
+            # repo_id="local/umi_pick_place_cup_0130_eval200", # mix csw and long
+            # repo_id="local/umi_pick_place_cup_0130_eval400", # mix csw and long
+            # repo_id="local/umi_pick_place_cup_0208_eval100", # 224 episodes by long strange
+            # repo_id="local/umi_pick_place_cup_0208_eval200", # 224 episodes by long strange
+            # repo_id = "local/umi_pick_place_cup_0209_eval100", # 100 episodes by long strange
+            # repo_id = "local/umi_pick_place_cup_0210_eval100", # 100 episodes by csw 
             # repo_id = "local/umi_pick_place_cup_0121", # 200 episodes by csw 
-            repo_id = "local/umi_pick_place_cup_0209_eval100", # 100 episodes by long
 
             # for stock-shelves task
             # repo_id="local/umi_stock_shelves_0202_eval200",
@@ -1305,6 +1330,8 @@ _CONFIGS = [
             # repo_id="local/umi_open_laptop_0208_eval200",
             # repo_id="local/umi_open_laptop_0208_eval300",
             # repo_id="local/umi_open_laptop_0208_eval400",
+            # repo_id="local/umi_open_laptop_0210_eval200_image", # 0204_100episodes + 0205_100episodes
+            repo_id="local/umi_open_laptop_0211_eval200_image", # 0206_200episodes
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
@@ -1319,6 +1346,8 @@ _CONFIGS = [
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
+
+
 
     # pi05_xv_finetune
     TrainConfig(
