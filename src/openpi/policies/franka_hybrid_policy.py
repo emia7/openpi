@@ -87,7 +87,6 @@ class FrankaRelInputs(transforms.DataTransformFn):
         
         # --- 1. Relative State Calculation ---
         # 计算当前 TCP 相对于 Demo Start 的变换
-        # 假设 data["demo_start_tcp_pose"] 是 (7,)
         if "demo_start_tcp_pose" in data:
             demo_start = np.asarray(data["demo_start_tcp_pose"], dtype=np.float32)
             

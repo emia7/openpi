@@ -1398,7 +1398,7 @@ _CONFIGS = [
         name="pi05_franka_abs6d_abs6d_finetune",
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         data=LeRobotFrankaAbsDataConfig(
-            repo_id="local/franka_pick_place_0118", 
+            repo_id="local/franka_pick_place_cup_0202_eval100", 
             base_config=DataConfig(prompt_from_task=True),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader(
@@ -1419,7 +1419,7 @@ _CONFIGS = [
         name="pi05_franka_rel6d_rel6d_finetune",
         model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
         data=LeRobotFrankaRelDataConfig(
-            repo_id="local/franka_pick_place_0118", 
+            repo_id="local/franka_pick_place_cup_0212_eval100", # lerobot dataset containing "observation.state.demo_start_tcp_pose"
             base_config=DataConfig(prompt_from_task=True),
         ),
         weight_loader=weight_loaders.CheckpointWeightLoader(
@@ -1447,17 +1447,19 @@ _CONFIGS = [
             discrete_state_input=False # 无state输入!!
             ),
         
-        data=LeRobotFrankaRel6dDataConfig(
+        # data=LeRobotFrankaRel6dDataConfig(
+        data=LeRobotFrankaRelDataConfig(
             # for pick-place-cup task
             # repo_id="local/franka_pick_place_cup_0202_eval50",
             # repo_id="local/franka_pick_place_cup_0202_eval100",
+            repo_id="local/franka_pick_place_cup_0212_eval100", # lerobot dataset containing "observation.state.demo_start_tcp_pose"
 
             # for stock-shelves task
             # repo_id="local/franka_stock_shelves_0201_eval50",
             # repo_id="local/franka_stock_shelves_0202_eval100",
 
             # for open-laptop task
-            repo_id="local/franka_open_laptop_0204_eval50",
+            # repo_id="local/franka_open_laptop_0204_eval50",
             # repo_id="local/franka_open_laptop_0204_eval100",        
             base_config=DataConfig(prompt_from_task=True),
         ),
@@ -1484,6 +1486,23 @@ _CONFIGS = [
     # **pi05_umi_rel6d_rel6d_finetune
     # input: image + relative state(10d with 6d rot) 
     # output: relative action(10d with 6d rot) 
+    TrainConfig(
+        name="pi05_umi_rel6d_rel6d_finetune",
+        model=pi0_config.Pi0Config(pi05=True, action_dim=32, action_horizon=10),
+        data=LeRobotUMIRelDataConfig(
+            repo_id = "local/umi_pick_place_cup_0121",
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+
+        num_train_steps=20_000,
+        batch_size=16,
+        save_interval=2000,
+        checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+        assets_base_dir="/share/guqiuyi-local/assets",
+    ),
 
     # **pi05_umi_rel6d_image_only_finetune
     # input: image
@@ -1496,7 +1515,8 @@ _CONFIGS = [
             action_horizon=10,
             discrete_state_input=False # 无state输入!!
         ),
-        data=LeRobotXVDataConfig(
+        # data=LeRobotXVDataConfig(
+        data=LeRobotUMIRelDataConfig(
             # for pick-place-cup task
             # repo_id="local/umi_pick_place_cup_0130_eval100", # mix csw and long
             # repo_id="local/umi_pick_place_cup_0130_eval200", # mix csw and long
@@ -1505,7 +1525,7 @@ _CONFIGS = [
             # repo_id="local/umi_pick_place_cup_0208_eval200", # 224 episodes by long strange
             # repo_id = "local/umi_pick_place_cup_0209_eval100", # 100 episodes by long strange
             # repo_id = "local/umi_pick_place_cup_0210_eval100", # 100 episodes by csw 
-            # repo_id = "local/umi_pick_place_cup_0121", # 200 episodes by csw 
+            repo_id = "local/umi_pick_place_cup_0121", # 200 episodes by csw 
 
             # for stock-shelves task
             # repo_id="local/umi_stock_shelves_0202_eval200",
@@ -1516,7 +1536,7 @@ _CONFIGS = [
             # repo_id="local/umi_open_laptop_0208_eval200",
             # repo_id="local/umi_open_laptop_0208_eval300",
             # repo_id="local/umi_open_laptop_0208_eval400",
-            repo_id="local/umi_open_laptop_0210_eval200_image", # 0204_100episodes + 0205_100episodes
+            # repo_id="local/umi_open_laptop_0210_eval200_image", # 0204_100episodes + 0205_100episodes
             # repo_id="local/umi_open_laptop_0211_eval200_image", # 0206_200episodes
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
@@ -1532,8 +1552,6 @@ _CONFIGS = [
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
-
-
 
     # pi05_xv_finetune
     TrainConfig(
