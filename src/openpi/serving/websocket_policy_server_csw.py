@@ -33,7 +33,6 @@ class WebsocketPolicyServer:
         self._metadata = metadata or {}
         logging.getLogger("websockets.server").setLevel(logging.INFO)
 
-        self._last_state_abs: np.ndarray | None = None
         self._episode_start_pose_by_conn: dict[int, np.ndarray] = {}
 
     def adapt_obs_for_xv(self, obs: dict, conn_id: int) -> dict:
@@ -72,13 +71,8 @@ class WebsocketPolicyServer:
 
         return out
 
-
-
     def serve_forever(self) -> None:
         asyncio.run(self.run())
-
-
-
 
     async def run(self):
         async with _server.serve(
@@ -94,7 +88,6 @@ class WebsocketPolicyServer:
     async def _handler(self, websocket: _server.ServerConnection):
         logger.info(f"Connection from {websocket.remote_address} opened")
         packer = msgpack_numpy.Packer()
-        self._last_state_abs = None
 
         await websocket.send(packer.pack(self._metadata))
 
@@ -103,9 +96,8 @@ class WebsocketPolicyServer:
             try:
                 start_time = time.monotonic()
                 obs = msgpack_numpy.unpackb(await websocket.recv())
-
                 adapt_obs = self.adapt_obs_for_xv(obs,1)
-
+                
                 infer_time = time.monotonic()
                 action = self._policy.infer(adapt_obs)
                 infer_time = time.monotonic() - infer_time

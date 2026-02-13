@@ -4,10 +4,7 @@ import numpy as np
 from openpi import transforms
 from openpi.models import model as _model
 
-# 引入基础转换工具
-from openpi.policies.pose_util import (
-    mat_to_pose10d, pose10d_to_mat, mat_to_pose6, pose6_to_mat
-)
+from openpi.policies.pose_util import mat_to_pose10d, pose10d_to_mat, mat_to_pose6, pose6_to_mat
 from openpi.policies.pose_repr_util import convert_pose_mat_rep
 
 def _parse_image(image) -> np.ndarray:
