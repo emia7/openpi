@@ -1,14 +1,13 @@
 import dataclasses
 import einops
 import numpy as np
+from scipy.spatial.transform import Rotation as R
+
 from openpi import transforms
+from openpi.policies.pose_util import pose6_to_mat, mat_to_pose10d, mat_to_pose6, pose10d_to_mat
+from openpi.policies.pose_repr_util import convert_pose_mat_rep
 from openpi.models import model as _model
 
-# 引入基础转换工具
-from openpi.policies.pose_util import (
-    mat_to_pose10d, pose10d_to_mat, mat_to_pose6, pose6_to_mat
-)
-from openpi.policies.pose_repr_util import convert_pose_mat_rep
 
 def _parse_image(image) -> np.ndarray:
     """Helper to convert images to uint8 HWC format."""
@@ -24,17 +23,17 @@ def _parse_image(image) -> np.ndarray:
 # ==============================================================================
 def _process_common_inputs(data: dict, model_type: _model.ModelType):
     """处理图像、Prompt 等通用输入"""
-    wrist_image = _parse_image(data["image"])
+    base_image = _parse_image(data["image"])
     
     match model_type:
         case _model.ModelType.PI0 | _model.ModelType.PI05:
             names = ("base_0_rgb", "left_wrist_0_rgb", "right_wrist_0_rgb")
-            images = (np.zeros_like(wrist_image), wrist_image, np.zeros_like(wrist_image))
-            image_masks = (np.False_, np.True_, np.False_)
+            images = (base_image, np.zeros_like(base_image), np.zeros_like(base_image))
+            image_masks = (np.True_, np.False_, np.False_)
         case _model.ModelType.PI0_FAST:
             names = ("base_0_rgb", "base_1_rgb", "wrist_0_rgb")
-            images = (np.zeros_like(wrist_image), wrist_image, np.zeros_like(wrist_image))
-            image_masks = (np.False_, np.True_, np.False_)
+            images = (base_image, np.zeros_like(base_image), np.zeros_like(base_image))
+            image_masks = (np.True_, np.False_, np.False_)
         case _:
             raise ValueError(f"Unsupported model type: {model_type}")
 
@@ -51,11 +50,8 @@ def _process_common_inputs(data: dict, model_type: _model.ModelType):
         if isinstance(data["task"], bytes):
             data["task"] = data["task"].decode("utf-8")
         inputs["prompt"] = data["task"]
-    else:
-        inputs["prompt"] = "do the task"
 
     return inputs
-
 
 # ==============================================================================
 # Mode 1: Relative 6D (Rel6d -> Rel6d)
@@ -68,17 +64,16 @@ class UMIRelInputs(transforms.DataTransformFn):
     def __call__(self, data: dict) -> dict:
         inputs = _process_common_inputs(data, self.model_type)
 
-        curr_pos = np.asarray(data["eef_pos"], dtype=np.float32)       # (3,) 
-        curr_rot = np.asarray(data["eef_rot_axis_angle"], dtype=np.float32) # (3,) 
-        gripper = np.asarray(data["gripper_width"], dtype=np.float32)   # (1,) 
-        if gripper.ndim == 0: gripper = gripper[None]
+        curr_pos = np.asarray(data["eef_pos"], np.float32)                  # (3,) 
+        curr_rot = np.asarray(data["eef_rot_axis_angle"], np.float32)       # (3,) 
+        gripper = np.asarray(data["gripper_width"], np.float32)            # (1,) 
 
         # --- 1. Relative State Calculation ---
         # 计算当前 TCP 相对于 Demo Start 的变换
         if "demo_start_pose" in data:
             demo_start = np.asarray(data["demo_start_pose"], dtype=np.float32)
-            
-            # 6D Pose (Pos + RotVec) -> Matrix
+
+            # 使用矩阵运算计算相对变换 (T_rel = T_start^-1 * T_curr)
             curr_mat = pose6_to_mat(np.concatenate([curr_pos, curr_rot], axis=-1))
             start_mat = pose6_to_mat(demo_start)
 
@@ -95,8 +90,8 @@ class UMIRelInputs(transforms.DataTransformFn):
             # 拼接 Gripper -> 10D State
             state = np.concatenate([rel_state_9d, gripper], axis=-1)
         else:
-            # Fallback
-            print("[WARN] Missing demo_start_pose, using absolute state in 10D format.")
+            # Fallback: 如果没有 demo_start，使用绝对坐标 (不推荐)
+            print("[WARN] Missing demo_start_tcp_pose, using absolute state.")
             curr_mat = pose6_to_mat(np.concatenate([curr_pos, curr_rot], axis=-1))
             abs_state_9d = mat_to_pose10d(curr_mat)
             state = np.concatenate([abs_state_9d, gripper], axis=-1)
@@ -107,30 +102,28 @@ class UMIRelInputs(transforms.DataTransformFn):
         # 目标是计算 T_curr^-1 * T_next
         raw_action_seq = data.get("actions", None)
         if raw_action_seq is not None:
-            raw_action_seq = np.asarray(raw_action_seq, dtype=np.float32)
-            
-            # Make it (H, 7)
+            # Make it (H,7)
             if raw_action_seq.ndim == 1:
+                # single-step fallback: repeat to horizon, all pad=True except first
                 raw_action_seq = raw_action_seq[None, :]
+                pad_mask = np.ones((self.action_horizon,), dtype=np.bool_)
+                pad_mask[0] = False
                 raw_action_seq = np.repeat(raw_action_seq, self.action_horizon, axis=0)
             else:
+                # assume already a sequence (T,7); pad/truncate to action_horizon
+                pad_mask = np.zeros((self.action_horizon,), dtype=np.bool_)
                 T = raw_action_seq.shape[0]
                 if T < self.action_horizon:
+                    pad_mask[T:] = True
                     raw_action_seq = np.concatenate(
                         [raw_action_seq, np.repeat(raw_action_seq[-1:], self.action_horizon - T, axis=0)], axis=0
                     )
                 else:
                     raw_action_seq = raw_action_seq[: self.action_horizon]
 
-            # 提取 Pose (前6维: Pos + RotVec) -> Matrix
-            target_pose_vec = np.concatenate([raw_action_seq[:, :3], raw_action_seq[:, 3:6]], axis=-1)
-            target_mat_seq = pose6_to_mat(target_pose_vec)
+            # 目标 Pose 矩阵序列 (H, 4, 4)
+            target_mat_seq = pose6_to_mat(np.concatenate([raw_action_seq[:, :3], raw_action_seq[:, 3:6]], axis=-1))
             
-            # 当前 Pose -> Matrix
-            # 注意：必须重新构建 curr_mat，因为之前可能用了fallback
-            curr_pose_vec = np.concatenate([curr_pos, curr_rot], axis=-1)
-            curr_mat = pose6_to_mat(curr_pose_vec)
-
             # 批量计算相对变换
             rel_action_mat_seq = convert_pose_mat_rep(
                 target_mat_seq,
@@ -148,9 +141,9 @@ class UMIRelInputs(transforms.DataTransformFn):
             # 拼接 -> 10D Action
             actions = np.concatenate([rel_action_9d, target_gripper], axis=-1).astype(np.float32)
 
-            # Padding 到 32 维
-            inputs["actions"] = transforms.pad_to_dim(actions, 32).astype(np.float32)
+            inputs["actions"] = actions
 
+        
         return inputs
 
 
@@ -161,19 +154,13 @@ class UMIRelInputs(transforms.DataTransformFn):
 class UMIRelOutputs(transforms.DataTransformFn):
     """解码 Relative 10D -> 7D Delta (Base/EEF Frame)"""
     def __call__(self, data: dict) -> dict:
-        act = np.asarray(data["actions"], dtype=np.float32)  # (H, 32)
-        
-        # 切片: 9D Pose + 1D Gripper
-        pose9d = act[..., :9]   
-        gripper = act[..., 9:10]
-        
-        # 解码: 9D -> Matrix -> 6D (Pos + RotVec)
-        # 这里的 6D 是 Delta Pose
+        act = np.asarray(data["actions"], dtype=np.float32)  # (H,11)
+        pose9d = act[..., :9]   # (H,9)
+        gripper = act[..., 9:10].astype(np.float32) / 88 # (H,1)
+
         mat = pose10d_to_mat(pose9d)
-        pose6d_delta = mat_to_pose6(mat) 
+        pose6d = mat_to_pose6(mat)
 
-        gripper_out = gripper / 88.0
+        action_7d = np.concatenate([pose6d, gripper], axis=-1).astype(np.float32)
 
-        action_7d = np.concatenate([pose6d_delta, gripper_out], axis=-1).astype(np.float32)
-
-        return {"actions": action_7d}  # (H, 7)
+        return {"actions": action_7d}        # (H,7)

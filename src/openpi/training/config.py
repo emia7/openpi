@@ -1515,8 +1515,8 @@ _CONFIGS = [
             action_horizon=10,
             discrete_state_input=False # 无state输入!!
         ),
-        # data=LeRobotXVDataConfig(
-        data=LeRobotUMIRelDataConfig(
+        data=LeRobotXVDataConfig(
+        # data=LeRobotUMIRelDataConfig(
             # for pick-place-cup task
             # repo_id="local/umi_pick_place_cup_0130_eval100", # mix csw and long
             # repo_id="local/umi_pick_place_cup_0130_eval200", # mix csw and long
@@ -1560,10 +1560,12 @@ _CONFIGS = [
             pi05=True,
             action_dim=32,  # pi05 is trained with 32-dim actions
             action_horizon=16,
+            discrete_state_input=False # 无state输入!!
         ),
         data=LeRobotXVDataConfig(
             # repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0122_s1/10000/assets",
-            repo_id="local/umi_stock_shelves_0128",
+            # repo_id="local/umi_stock_shelves_0128",
+            repo_id="",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),

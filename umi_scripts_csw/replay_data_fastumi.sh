@@ -72,4 +72,4 @@ ARGS=(
 [[ "$CONFIRM" == "true" ]]    && ARGS+=(--confirm_each_step)
 
 # Run
-"$PROJECT_ROOT/.venv/bin/python" scripts/replay_data_fastumi.py "${ARGS[@]}"
+"$PROJECT_ROOT/.venv/bin/python" umi_scripts_csw/replay_data_fastumi.py "${ARGS[@]}"
