@@ -21,17 +21,17 @@ def _parse_image(image) -> np.ndarray:
 # ==============================================================================
 def _process_common_inputs(data: dict, model_type: _model.ModelType):
     """处理图像、Prompt 等通用输入"""
-    base_image = _parse_image(data["image"])
+    wrist_image = _parse_image(data["image"])
     
     match model_type:
         case _model.ModelType.PI0 | _model.ModelType.PI05:
             names = ("base_0_rgb", "left_wrist_0_rgb", "right_wrist_0_rgb")
-            images = (base_image, np.zeros_like(base_image), np.zeros_like(base_image))
-            image_masks = (np.True_, np.False_, np.False_)
+            images = (np.zeros_like(wrist_image), wrist_image, np.zeros_like(wrist_image))
+            image_masks = (np.False_, np.True_, np.False_)
         case _model.ModelType.PI0_FAST:
             names = ("base_0_rgb", "base_1_rgb", "wrist_0_rgb")
-            images = (base_image, np.zeros_like(base_image), np.zeros_like(base_image))
-            image_masks = (np.True_, np.False_, np.False_)
+            images = (np.zeros_like(wrist_image), wrist_image, np.zeros_like(wrist_image))
+            image_masks = (np.False_, np.True_, np.False_)
         case _:
             raise ValueError(f"Unsupported model type: {model_type}")
 

@@ -37,6 +37,42 @@ class WebsocketPolicyServer:
 
     def adapt_obs_for_xv(self, obs: dict, conn_id: int) -> dict:
 
+        image = obs["image"]
+
+        tcp = np.asarray(obs["tcp_pose"], dtype=np.float32).reshape(-1)
+        if tcp.shape[0] != 7:
+            raise ValueError(f"tcp_pose must be shape (7,) = (x,y,z,qx,qy,qz,qw), got {tcp.shape}")
+
+        pos = tcp[0:3]
+        quat = tcp[3:7]  # (qx,qy,qz,qw)
+        rotvec = R.from_quat(quat).as_rotvec().astype(np.float32)
+
+        grip = np.asarray(obs["gripper_pose"], dtype=np.float32).reshape(-1)
+        gripper_width = np.array([float(grip[0])], dtype=np.float32) if grip.size else np.array([0.0], dtype=np.float32)
+
+        start_tcp = obs["demo_start_tcp_pose"]
+        start_pos = start_tcp[0:3]
+        start_quat = start_tcp[3:7]
+        start_rotvec = R.from_quat(start_quat).as_rotvec().astype(np.float32)
+        start_pose = np.concatenate([start_pos, start_rotvec], axis=0).astype(np.float32)
+ 
+        out = {
+            "image": image,
+            "eef_pos": pos.astype(np.float32),
+            "eef_rot_axis_angle": rotvec.astype(np.float32),
+            "gripper_width": gripper_width,
+            "demo_start_pose": start_pose,
+        }
+
+        if "prompt" in obs:
+            out["prompt"] = obs["prompt"]
+        elif "task" in obs:
+            out["task"] = obs["task"]
+
+        return out
+    
+    def adapt_obs_for_xv_old(self, obs: dict, conn_id: int) -> dict:
+
 
         image = obs["image"]
 
