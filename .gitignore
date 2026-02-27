@@ -3,6 +3,8 @@ assets/
 checkpoints/
 data/
 wandb/
+eval_results/
+compare_npz_out/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
