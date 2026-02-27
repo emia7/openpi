@@ -149,7 +149,8 @@ class UMIRelInputs(transforms.DataTransformFn):
             actions = np.concatenate([rel_action_9d, target_gripper], axis=-1).astype(np.float32)
 
             # Padding 到 32 维
-            inputs["actions"] = transforms.pad_to_dim(actions, 32).astype(np.float32)
+            # inputs["actions"] = transforms.pad_to_dim(actions, 32).astype(np.float32)
+            inputs["actions"] = actions
 
         return inputs
 

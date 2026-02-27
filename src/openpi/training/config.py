@@ -1515,8 +1515,8 @@ _CONFIGS = [
             action_horizon=10,
             discrete_state_input=False # 无state输入!!
         ),
-        data=LeRobotXVDataConfig(
-        # data=LeRobotUMIRelDataConfig(
+        # data=LeRobotXVDataConfig(
+        data=LeRobotUMIRelDataConfig(
             # for pick-place-cup task
             # repo_id="local/umi_pick_place_cup_0130_eval100", # mix csw and long
             # repo_id="local/umi_pick_place_cup_0130_eval200", # mix csw and long
@@ -1525,7 +1525,8 @@ _CONFIGS = [
             # repo_id="local/umi_pick_place_cup_0208_eval200", # 224 episodes by long strange
             # repo_id = "local/umi_pick_place_cup_0209_eval100", # 100 episodes by long strange
             # repo_id = "local/umi_pick_place_cup_0210_eval100", # 100 episodes by csw 
-            repo_id = "local/umi_pick_place_cup_0121", # 200 episodes by csw 
+            # repo_id = "local/umi_pick_place_cup_0121", # 200 episodes by csw 
+            repo_id = "local/umi_pick_place_cup_0226_eval189", # 189 episodes by csw
 
             # for stock-shelves task
             # repo_id="local/umi_stock_shelves_0202_eval200",
@@ -1559,13 +1560,13 @@ _CONFIGS = [
         model=pi0_config.Pi0Config(
             pi05=True,
             action_dim=32,  # pi05 is trained with 32-dim actions
-            action_horizon=16,
+            action_horizon=10,
             discrete_state_input=False # 无state输入!!
         ),
         data=LeRobotXVDataConfig(
             # repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0122_s1/10000/assets",
             # repo_id="local/umi_stock_shelves_0128",
-            repo_id="",
+            repo_id="local/umi_pick_place_cup_0226_eval189",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
@@ -1574,15 +1575,43 @@ _CONFIGS = [
             "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
         ),
 
-        log_interval=500,
-        keep_period=10_000,
-
-        num_train_steps=30_000,
-        batch_size=32,
+        num_train_steps=20_000,
+        batch_size=16,
         save_interval=2000,
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
     ),
+
+    # pi05_xv_finetune
+    # TrainConfig(
+    #     name="pi05_xv_finetune",
+    #     model=pi0_config.Pi0Config(
+    #         pi05=True,
+    #         action_dim=32,  # pi05 is trained with 32-dim actions
+    #         action_horizon=16,
+    #         discrete_state_input=False # 无state输入!!
+    #     ),
+    #     data=LeRobotXVDataConfig(
+    #         # repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0122_s1/10000/assets",
+    #         # repo_id="local/umi_stock_shelves_0128",
+    #         repo_id="",
+    #         base_config=DataConfig(
+    #             prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
+    #         ),
+    #     ),
+    #     weight_loader=weight_loaders.CheckpointWeightLoader(
+    #         "/home/guqiuyi/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+    #     ),
+
+    #     log_interval=500,
+    #     keep_period=10_000,
+
+    #     num_train_steps=30_000,
+    #     batch_size=32,
+    #     save_interval=2000,
+    #     checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
+    #     assets_base_dir="/share/guqiuyi-local/assets",
+    # ),
 
     #
     # ALOHA Sim configs. This config is used to demonstrate how to train on a simple simulated environment.
