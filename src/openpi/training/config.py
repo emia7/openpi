@@ -827,6 +827,7 @@ class LeRobotXVDataConfig(DataConfigFactory):
             repack_transforms=repack_transform,
             data_transforms=data_transforms,
             model_transforms=model_transforms,
+            use_quantile_norm=False,  # XV dataset is small and we found that quantile norm hurts performance, so we disable it here.
         )
 
 @dataclasses.dataclass(frozen=True)

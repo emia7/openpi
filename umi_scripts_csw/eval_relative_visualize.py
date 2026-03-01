@@ -224,7 +224,7 @@ def main():
         state_list.append(np.asarray(state, dtype=np.float32))
 
         acts = transformed.get("actions", None)
-        print(acts[0][21])
+        # print(acts[0][21])
         if acts is None:
             # Some transforms might not include actions if not provided
             actions_list.append(None)
