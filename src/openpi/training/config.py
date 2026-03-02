@@ -27,6 +27,7 @@ import openpi.policies.franka_del_policy as franka_del_policy
 import openpi.policies.franka_rel3d_policy as franka_rel3d_policy
 import openpi.policies.franka_rel6d_policy as franka_rel6d_policy
 import openpi.policies.xv_policy as xv_policy
+import openpi.policies.xv13_policy as xv13_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
@@ -830,6 +831,51 @@ class LeRobotXVDataConfig(DataConfigFactory):
             use_quantile_norm=False,  # XV dataset is small and we found that quantile norm hurts performance, so we disable it here.
         )
 
+
+class LeRobotXV13DataConfig(DataConfigFactory):
+    """
+    Example data config for XV dataset in LeRobot format.
+    Dataset keys from your conversion script:
+      - wrist_view: video frame (H,W,3) uint8
+      - state: float32 (8,)
+      - actions: float32 (8,)  (next-state)
+      - task: instruction string
+
+    """
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "head_view": "head_view",
+                        "left_view": "left_view",
+                        "eef_pos": "eef_pos",
+                        "eef_rot_axis_angle": "eef_rot_axis_angle",
+                        "gripper_width": "gripper_width",
+                        "demo_start_pose": "demo_start_pose",
+                        "actions": "actions",
+                        "task": "task",
+                    }
+                )
+            ]
+        )
+        # We assume joint *velocity* actions, so we should *not* apply an additional delta transform.
+        data_transforms = _transforms.Group(
+            inputs=[xv13_policy.XVInputs(model_type=model_config.model_type, action_dim=model_config.action_dim, action_horizon=model_config.action_horizon)],
+            outputs=[xv13_policy.XVOutputs()],
+        )
+        model_transforms = ModelTransformFactory()(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            use_quantile_norm=False, 
+        )
+    
 @dataclasses.dataclass(frozen=True)
 class TrainConfig:
     # Name of the config. Must be unique. Will be used to reference this config.
@@ -1581,6 +1627,35 @@ _CONFIGS = [
         save_interval=2000,
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
+    ),
+
+    TrainConfig(
+        name="pi05_xv13_finetune",
+        model=pi0_config.Pi0Config(
+            pi05=True,
+            action_dim=32,  # pi05 is trained with 32-dim actions
+            action_horizon=16,
+        ),
+        data=LeRobotXV13DataConfig(
+            repo_id="/share/chenshuaiwen-local/.cache/hf_home/fastumi/batch_pick_up_cubes_0127",
+            # repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0116/20000/assets",
+            base_config=DataConfig(
+                prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader("/home/chenshuaiwen/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"),
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=1_000,
+            peak_lr=5e-5,
+            decay_steps=1_000_000,
+            decay_lr=5e-5,
+        ),
+        log_interval=500,
+        save_interval=2000,
+        keep_period=10_000,
+        num_workers=2,
+        num_train_steps=30_000,
+        batch_size=32,
     ),
 
     # pi05_xv_finetune
