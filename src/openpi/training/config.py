@@ -832,6 +832,77 @@ class LeRobotXVDataConfig(DataConfigFactory):
         )
 
 
+@dataclasses.dataclass(frozen=True)
+class LeRobotXVDualDataConfig(DataConfigFactory):
+    """
+    Data config for XV dual-hand dataset in LeRobot format.
+
+    Expected dataset keys (per frame):
+      - left_view, right_view, third_view: video frames uint8 (H,W,3)
+      - left_eef_pos (3), left_eef_rotvec (3), left_gripper (1)
+      - right_eef_pos (3), right_eef_rotvec (3), right_gripper (1)
+      - demo_start_pose_left (6), demo_start_pose_right (6)
+      - left_action (7), right_action (7)     # next-state abs
+      - task: string
+    """
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        # 1) Repack: map dataset keys -> policy expected keys
+        repack_transform = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        # images
+                        "left_view": "left_view",
+                        "right_view": "right_view",
+                        "third_view": "third_view",
+
+                        # states
+                        "left_eef_pos": "left_eef_pos",
+                        "left_eef_rotvec": "left_eef_rotvec",
+                        "left_gripper": "left_gripper",
+                        "right_eef_pos": "right_eef_pos",
+                        "right_eef_rotvec": "right_eef_rotvec",
+                        "right_gripper": "right_gripper",
+
+                        # demo start poses (required by your policy)
+                        "demo_start_pose_left": "demo_start_pose_left",
+                        "demo_start_pose_right": "demo_start_pose_right",
+
+                        # actions (per hand)
+                        "left_action": "left_action",
+                        "right_action": "right_action",
+
+                        # prompt/task
+                        "task": "task",
+                    }
+                )
+            ]
+        )
+
+        # 2) Data transforms: (raw lerobot frame) -> (model inputs) and model outputs -> env action
+        data_transforms = _transforms.Group(
+            inputs=[
+                xv_policy.XVDualInputs(
+                    model_type=model_config.model_type,
+                    action_dim=model_config.action_dim,
+                    action_horizon=model_config.action_horizon,
+                )
+            ],
+            outputs=[xv_policy.XVDualOutputs()],
+        )
+
+        # 3) Model transforms: pad/normalize/etc per model config
+        model_transforms = ModelTransformFactory()(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            repack_transforms=repack_transform,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            use_quantile_norm=False,
+        )
 class LeRobotXV13DataConfig(DataConfigFactory):
     """
     Example data config for XV dataset in LeRobot format.
@@ -1613,7 +1684,7 @@ _CONFIGS = [
         data=LeRobotXVDataConfig(
             # repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0122_s1/10000/assets",
             # repo_id="local/umi_stock_shelves_0128",
-            repo_id="local/umi_pick_place_cup_0226_eval189",
+            repo_id="local/umi_pick_place_cup_0226",
             base_config=DataConfig(
                 prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
             ),
@@ -1627,6 +1698,32 @@ _CONFIGS = [
         save_interval=2000,
         checkpoint_base_dir="/share/guqiuyi-local/checkpoints",
         assets_base_dir="/share/guqiuyi-local/assets",
+    ),
+
+    TrainConfig(
+        name="pi05_xv_dual_finetune",
+        model=pi0_config.Pi0Config(
+            pi05=True,
+            action_dim=32,  # pi05 is trained with 32-dim actions
+            action_horizon=10,
+            discrete_state_input=False # 无state输入!!
+        ),
+        data=LeRobotXVDualDataConfig(
+            # repo_id="/home/ubuntu/qiuyi/ckpts/ckpt_xv_0122_s1/10000/assets",
+            # repo_id="local/umi_stock_shelves_0128",
+            repo_id="local/umi_pick_place_cup_0226",
+            base_config=DataConfig(
+                prompt_from_task=True,  # 用 dataset 的 "task" 字段做 prompt
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/home/chenshuaiwen/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
+        ),
+
+        num_train_steps=20_000,
+        batch_size=16,
+        save_interval=2000,
+        checkpoint_base_dir="/share/chenshuaiwen-local/checkpoints",
     ),
 
     TrainConfig(
