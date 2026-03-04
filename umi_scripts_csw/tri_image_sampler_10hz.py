@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ROS1: 3-camera 10Hz sampler + stamp delta monitor
-- Left/Right (xv_sdk): sensor_msgs/Image @ ~60Hz -> publish 10Hz
-- Third view (D435): sensor_msgs/CompressedImage @ ~30Hz -> publish 10Hz
+ROS1: 3-camera 10Hz sampler + L-R stamp delta monitor (A方案)
+
+- Left/Right (xv_sdk): sensor_msgs/Image @ ~60Hz -> publish 10Hz (latest cached)
+- Third view (D435): sensor_msgs/CompressedImage @ ~30Hz -> publish 10Hz (latest cached)
 - Timer-driven sampling (10Hz) publishes the latest cached frame from each camera.
-- Keeps ORIGINAL header.stamp (recommended for pose alignment).
-- Prints stamp deltas (left-right, left-d435, right-d435) with sliding stats.
+- Keeps ORIGINAL header.stamp (for downstream pose alignment on the same time base).
+- ONLY monitors |L-R| stamp delta (ignores D435 stamp time base to avoid false warnings).
 
 Usage:
   1) Put this file in a catkin package's scripts/ directory
-  2) chmod +x scripts/tri_image_sampler_10hz.py
-  3) rosrun <your_pkg> tri_image_sampler_10hz.py
+  2) chmod +x scripts/tri_image_sampler_10hz_lr_only.py
+  3) rosrun <your_pkg> tri_image_sampler_10hz_lr_only.py
 
 Configure topics below in CONFIG (no command-line params needed).
 """
@@ -33,7 +34,7 @@ CONFIG = {
     # Print controls (avoid spamming logs)
     "print_every_sec": 1.0,     # print deltas every N seconds
     "window_size": 200,         # sliding window length (in timer ticks, ~20s at 10Hz)
-    "warn_if_gap_ms": 30.0,     # warn if abs stamp delta exceeds this
+    "warn_if_gap_ms": 30.0,     # warn if abs L-R stamp delta exceeds this
     "require_all": True,        # if True: only publish when all 3 cams have frames
 
     # Camera topics
@@ -57,7 +58,7 @@ CONFIG = {
 }
 
 
-class TriImageSampler10Hz:
+class TriImageSampler10HzLROnly:
     def __init__(self, cfg: dict):
         self.cfg = cfg
         self.rate_hz = float(cfg["rate_hz"])
@@ -67,8 +68,6 @@ class TriImageSampler10Hz:
 
         self.window_size = int(cfg["window_size"])
         self.lr_deltas = deque(maxlen=self.window_size)
-        self.ld_deltas = deque(maxlen=self.window_size)
-        self.rd_deltas = deque(maxlen=self.window_size)
         self.last_print_time = rospy.Time(0)
 
         cams = cfg["cameras"]
@@ -96,12 +95,12 @@ class TriImageSampler10Hz:
 
         self.timer = rospy.Timer(rospy.Duration(1.0 / self.rate_hz), self._on_timer)
 
-        rospy.loginfo("TriImageSampler10Hz started.")
+        rospy.loginfo("TriImageSampler10HzLROnly started.")
         rospy.loginfo("rate_hz=%.3f, require_all=%s", self.rate_hz, str(self.require_all))
         rospy.loginfo("Left : %s -> %s", self.left_in, self.left_out)
         rospy.loginfo("Right: %s -> %s", self.right_in, self.right_out)
         rospy.loginfo("D435 : %s -> %s", self.d435_in, self.d435_out)
-        rospy.loginfo("Delta print every %.2fs, warn_if_gap_ms=%.1f, window_size=%d",
+        rospy.loginfo("L-R delta print every %.2fs, warn_if_gap_ms=%.1f, window_size=%d",
                       self.print_every_sec, self.warn_if_gap_ms, self.window_size)
 
     def _cb_left(self, msg: Image):
@@ -120,31 +119,25 @@ class TriImageSampler10Hz:
     def _abs_dt_ms(t0: rospy.Time, t1: rospy.Time) -> float:
         return abs((t0 - t1).to_sec()) * 1000.0
 
-    def _maybe_print(self, now: rospy.Time, lr_ms: float, ld_ms: float, rd_ms: float,
-                     tL: rospy.Time, tR: rospy.Time, tD: rospy.Time):
+    def _maybe_print_lr(self, now: rospy.Time, lr_ms: float, tL: rospy.Time, tR: rospy.Time):
         if (now - self.last_print_time).to_sec() < self.print_every_sec:
             return
         self.last_print_time = now
 
-        def stats(dq):
-            if len(dq) == 0:
-                return (math.nan, math.nan)
-            return (sum(dq) / len(dq), max(dq))
-
-        lr_mean, lr_max = stats(self.lr_deltas)
-        ld_mean, ld_max = stats(self.ld_deltas)
-        rd_mean, rd_max = stats(self.rd_deltas)
+        if len(self.lr_deltas) == 0:
+            lr_mean, lr_max = (math.nan, math.nan)
+        else:
+            lr_mean = sum(self.lr_deltas) / len(self.lr_deltas)
+            lr_max = max(self.lr_deltas)
 
         msg = (
             f"[stamp_delta @10Hz] "
-            f"tL={tL.to_sec():.6f}  tR={tR.to_sec():.6f}  tD={tD.to_sec():.6f}  |  "
+            f"tL={tL.to_sec():.6f}  tR={tR.to_sec():.6f}  |  "
             f"|L-R|={lr_ms:.2f}ms (mean={lr_mean:.2f}, max={lr_max:.2f})  "
-            f"|L-D|={ld_ms:.2f}ms (mean={ld_mean:.2f}, max={ld_max:.2f})  "
-            f"|R-D|={rd_ms:.2f}ms (mean={rd_mean:.2f}, max={rd_max:.2f})  "
             f"window={len(self.lr_deltas)}"
         )
 
-        if (lr_ms >= self.warn_if_gap_ms) or (ld_ms >= self.warn_if_gap_ms) or (rd_ms >= self.warn_if_gap_ms):
+        if lr_ms >= self.warn_if_gap_ms:
             rospy.logwarn(msg + f"  (>= {self.warn_if_gap_ms:.1f}ms)")
         else:
             rospy.loginfo(msg)
@@ -162,7 +155,7 @@ class TriImageSampler10Hz:
             if (mL is None) and (mR is None) and (mD is None):
                 return
 
-        # Publish latest (keep original header.stamp for pose alignment)
+        # Publish latest (keep original header.stamp)
         if mL is not None:
             self.pub_left.publish(mL)
         if mR is not None:
@@ -170,24 +163,17 @@ class TriImageSampler10Hz:
         if mD is not None:
             self.pub_d435.publish(mD)
 
-        # Delta stats (only when all present)
-        if (mL is not None) and (mR is not None) and (mD is not None):
+        # Only monitor L-R stamp delta (ignore D435)
+        if (mL is not None) and (mR is not None):
             tL = mL.header.stamp
             tR = mR.header.stamp
-            tD = mD.header.stamp
-
             lr_ms = self._abs_dt_ms(tL, tR)
-            ld_ms = self._abs_dt_ms(tL, tD)
-            rd_ms = self._abs_dt_ms(tR, tD)
 
             self.lr_deltas.append(lr_ms)
-            self.ld_deltas.append(ld_ms)
-            self.rd_deltas.append(rd_ms)
-
-            self._maybe_print(rospy.Time.now(), lr_ms, ld_ms, rd_ms, tL, tR, tD)
+            self._maybe_print_lr(rospy.Time.now(), lr_ms, tL, tR)
 
 
 if __name__ == "__main__":
-    rospy.init_node("tri_image_sampler_10hz", anonymous=False)
-    TriImageSampler10Hz(CONFIG)
+    rospy.init_node("tri_image_sampler_10hz_lr_only", anonymous=False)
+    TriImageSampler10HzLROnly(CONFIG)
     rospy.spin()

@@ -28,6 +28,7 @@ import openpi.policies.franka_rel3d_policy as franka_rel3d_policy
 import openpi.policies.franka_rel6d_policy as franka_rel6d_policy
 import openpi.policies.xv_policy as xv_policy
 import openpi.policies.xv13_policy as xv13_policy
+import openpi.policies.xv_dual_policy as xv_dual_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
 import openpi.training.droid_rlds_dataset as droid_rlds_dataset
@@ -873,6 +874,7 @@ class LeRobotXVDualDataConfig(DataConfigFactory):
                         # actions (per hand)
                         "left_action": "left_action",
                         "right_action": "right_action",
+                        "actions":"actions",
 
                         # prompt/task
                         "task": "task",
@@ -884,13 +886,13 @@ class LeRobotXVDualDataConfig(DataConfigFactory):
         # 2) Data transforms: (raw lerobot frame) -> (model inputs) and model outputs -> env action
         data_transforms = _transforms.Group(
             inputs=[
-                xv_policy.XVDualInputs(
+                xv_dual_policy.XVDualInputs(
                     model_type=model_config.model_type,
                     action_dim=model_config.action_dim,
                     action_horizon=model_config.action_horizon,
                 )
             ],
-            outputs=[xv_policy.XVDualOutputs()],
+            outputs=[xv_dual_policy.XVDualOutputs()],
         )
 
         # 3) Model transforms: pad/normalize/etc per model config

@@ -97,8 +97,11 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
             # actions: next-step absolute pose+grip for each hand
             "left_action": {"dtype": "float32", "shape": (7,), "names": ["x", "y", "z", "rx", "ry", "rz", "g"]},
             "right_action": {"dtype": "float32", "shape": (7,), "names": ["x", "y", "z", "rx", "ry", "rz", "g"]},
+            "actions": {"dtype": "float32", "shape": (14,), "names": [
+                "left_x", "left_y", "left_z", "left_rx", "left_ry", "left_rz", "left_g",
+                "right_x", "right_y", "right_z", "right_rx", "right_ry", "right_rz", "right_g",
+            ]},
 
-            "task": {"dtype": "string", "shape": (), "names": []},
         },
         image_writer_threads=8,
         image_writer_processes=4,
@@ -161,6 +164,8 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
                 left_action = np.concatenate([pos_l2, rot_l2, g_l2], axis=0).astype(np.float32)   # (7,)
                 right_action = np.concatenate([pos_r2, rot_r2, g_r2], axis=0).astype(np.float32)  # (7,)
 
+                actions = np.concatenate([left_action, right_action], axis=0).astype(np.float32)  # (14,)
+
                 dataset.add_frame({
                     "left_view": fl,
                     "right_view": fr,
@@ -179,6 +184,7 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
 
                     "left_action": left_action,
                     "right_action": right_action,
+                    "actions": actions,
 
                     "task": task,
                 })
