@@ -79,7 +79,7 @@ def main():
     train_cfg = _config.get_config(args.config)
     train_cfg = dataclasses.replace(train_cfg, exp_name=args.exp_name)
     ckpt_dir = Path("/share/chenshuaiwen-local/checkpoints") / args.config / args.exp_name / str(args.step)
-    
+    # pt_dir = Path("/share/public-local/checkpoints") / args.config / args.exp_name / str(args.step)
     print(f"[INFO] Loading policy: {ckpt_dir}")
     policy = policy_config.create_trained_policy(train_cfg, str(ckpt_dir))
     

@@ -13,6 +13,7 @@ This is an experiment: $\pi_0$ was developed for our own robots, which differ fr
 
 ## Updates
 
+- [Mar 2026] Dual-arm Franka: LeRobot conversion script (`dual_scripts/`), `pi05_dual_franka_finetune_*` configs, and `dual_franka_policy` (see [Dual-arm Franka](#dual-arm-franka-bimanual-lerobot) under Fine-Tuning).
 - [Sept 2025] We released PyTorch support in openpi.
 - [Sept 2025] We released pi05, an upgraded version of pi0 with better open-world generalization.
 - [Sept 2025]: We have added an [improved idle filter](examples/droid/README_train.md#data-filtering) for DROID training.
@@ -186,6 +187,37 @@ We provide more examples for how to fine-tune and run inference with our models 
 - [ALOHA Simulator](examples/aloha_sim)
 - [ALOHA Real](examples/aloha_real)
 - [UR5](examples/ur5)
+
+### Dual-arm Franka (bimanual LeRobot)
+
+This fork adds an end-to-end path from dual Franka exports (parquet + per-camera MP4 + meta) to π₀.₅ fine-tuning.
+
+1. **Convert to LeRobot** — [`dual_scripts/convert_dual_franka_data_to_lerobot.py`](dual_scripts/convert_dual_franka_data_to_lerobot.py). Uses `next_observation` for `left_action` / `right_action` (parquet `action` is ignored). Example:
+   ```bash
+   uv run python dual_scripts/convert_dual_franka_data_to_lerobot.py \
+     --input_dirs=/path/to/raw_episodes \
+     --repo_id=/path/to/lerobot_dataset_root
+   ```
+   All wrist and third-person streams are stored; training picks views via the config below.
+
+2. **Training configs** — In [`src/openpi/training/config.py`](src/openpi/training/config.py), `TrainConfig` entries:
+   - `pi05_dual_franka_finetune_high_lumos` / `pi05_dual_franka_finetune_high_rs`
+   - `pi05_dual_franka_finetune_mask_lumos` / `pi05_dual_franka_finetune_mask_rs`  
+   Each sets `LeRobotDualFrankaDataConfig.variant` (third-view **high** vs **mask** policy slot, and **Lumos** vs **RealSense D435** wrist keys in `RepackTransform`). **Edit `repo_id` in these `TrainConfig`s** so it matches the LeRobot root you passed as `--repo_id` when converting. The four configs intentionally share one dataset when `repo_id` is the same; tasks or episode counts are merged in that dataset, not as separate config names.  
+   **Norm stats:** `asset_id` is not set separately — it defaults to `repo_id`, so `compute_norm_stats.py` and training agree on where `norm_stats.json` lives (for an absolute `repo_id`, that file is written under the dataset directory).
+
+3. **Policy I/O** — [`src/openpi/policies/dual_franka_policy.py`](src/openpi/policies/dual_franka_policy.py) (`DualFranka*Inputs` / `DualFrankaDualHandOutputs`).
+
+4. **Compute normalization stats** (once per shared `repo_id`):
+   ```bash
+   uv run scripts/compute_norm_stats.py --config-name pi05_dual_franka_finetune_high_lumos
+   ```
+   Optional: `--max-frames N` for a quick sanity pass.
+
+5. **Train** (pick the config that matches your wrist / third-view setup). On multi-GPU machines set **`CUDA_VISIBLE_DEVICES`** to the physical GPU index(es) you want:
+   ```bash
+   CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_MEM_FRACTION=0.9 uv run scripts/train.py pi05_dual_franka_finetune_high_lumos --exp-name=my_run --overwrite
+   ```
 
 ## PyTorch Support
 

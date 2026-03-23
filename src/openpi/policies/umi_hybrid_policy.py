@@ -29,6 +29,8 @@ def _process_common_inputs(data: dict, model_type: _model.ModelType):
     match model_type:
         case _model.ModelType.PI0 | _model.ModelType.PI05:
             names = ("base_0_rgb", "left_wrist_0_rgb", "right_wrist_0_rgb")
+            images = ( np.zeros_like(base_image), base_image, np.zeros_like(base_image))
+            image_masks = (np.False_, np.True_,  np.False_)
             images = (np.zeros_like(wrist_image), wrist_image, np.zeros_like(wrist_image))
             image_masks = (np.False_, np.True_, np.False_)
         case _model.ModelType.PI0_FAST:
