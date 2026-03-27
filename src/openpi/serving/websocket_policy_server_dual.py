@@ -111,22 +111,24 @@ class WebsocketPolicyServerDual:
 
     def _adapt_obs_for_xv_dual(self, obs: dict, conn_id: int) -> dict:
         # -----------------------
-        # 1) Images (fallback: reuse a single image for all views)
+        # 1) Images (strict: require all three views)
         # -----------------------
         left_img = _pick_image_from_obs(obs, preferred_keys=["left_view", "left/image", "left", "left_wrist", "left/wrist"])
         right_img = _pick_image_from_obs(obs, preferred_keys=["right_view", "right/image", "right", "right_wrist", "right/wrist"])
         third_img = _pick_image_from_obs(obs, preferred_keys=["third_view", "third/image", "base", "side", "front", "fish_eye_front"])
-
-        # Final fallback: if only one exists, broadcast it
-        any_img = left_img or right_img or third_img
-        if any_img is None:
-            any_img = np.zeros((224, 224, 3), dtype=np.uint8)
+        missing_views = []
         if left_img is None:
-            left_img = any_img
+            missing_views.append("left_view")
         if right_img is None:
-            right_img = any_img
+            missing_views.append("right_view")
         if third_img is None:
-            third_img = any_img
+            missing_views.append("third_view")
+        if missing_views:
+            raise KeyError(
+                "Dual server requires all three image views. "
+                f"Missing: {missing_views}. "
+                "Provide left/right/third view explicitly; fallback broadcasting is disabled."
+            )
 
         # -----------------------
         # 2) Poses & grippers
@@ -256,4 +258,3 @@ def _health_check(connection: _server.ServerConnection, request: _server.Request
     if request.path == "/healthz":
         return connection.respond(http.HTTPStatus.OK, "OK\n")
     return None
-
