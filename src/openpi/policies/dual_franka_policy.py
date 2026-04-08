@@ -4,8 +4,10 @@ Dual Franka bimanual VLA transforms (standalone; does not subclass `xv_dual_poli
 After `RepackTransform`, each frame uses:
   - `left_view`, `right_view`, `third_view` (uint8 HWC)
   - `left_eef_pos`, `left_eef_rotvec`, `left_gripper`, and right counterparts
-  - `demo_start_pose_left`, `demo_start_pose_right` (6D pos+rotvec)
+  - `demo_start_pose_left`, `demo_start_pose_right` (6D pos+rotvec; repacked but **not** used for state)
   - training: `left_action`, `right_action` (7D absolute next state per hand)
+
+Low-dim **state** is **absolute** in the robot base frame: left pose9 + grip + right pose9 + grip (20-D).
 
 Four `Inputs` classes differ only by **documentation / future hooks** (same tensor math today):
   - high third camera + Lumos wrists vs RealSense wrists
@@ -42,12 +44,16 @@ def _dual_franka_bimanual_inputs(
     model_type: _model.ModelType,
     action_dim: int,
     action_horizon: int,
+    mask_third_view: bool = False,
 ) -> dict:
-    """Shared forward: images + 12-D relative rot6d state + optional (H,20) actions + prompt."""
+    """Shared forward: images + 20-D absolute pose9+gripper state + optional (H,20) actions + prompt."""
     del model_type  # reserved for parity with other policies
     del action_dim
 
     third_img = _parse_image(data["third_view"])
+    if mask_third_view:
+        # True-ignore the third-person view: mask tokens and also zero out the image content.
+        third_img = np.zeros_like(third_img)
     left_img = _parse_image(data["left_view"])
     right_img = _parse_image(data["right_view"])
 
@@ -58,7 +64,7 @@ def _dual_franka_bimanual_inputs(
             "right_wrist_0_rgb": right_img,
         },
         "image_mask": {
-            "base_0_rgb": np.True_,
+            "base_0_rgb": np.False_ if mask_third_view else np.True_,
             "left_wrist_0_rgb": np.True_,
             "right_wrist_0_rgb": np.True_,
         },
@@ -75,20 +81,10 @@ def _dual_franka_bimanual_inputs(
     l_cur_mat = pose6_to_mat(np.concatenate([l_pos, l_rot], axis=-1))
     r_cur_mat = pose6_to_mat(np.concatenate([r_pos, r_rot], axis=-1))
 
-    l_start = np.asarray(data["demo_start_pose_left"], np.float32)
-    l_start_mat = pose6_to_mat(l_start)
-    r_start = np.asarray(data["demo_start_pose_right"], np.float32)
-    r_start_mat = pose6_to_mat(r_start)
-
-    l_rel_mat = convert_pose_mat_rep(l_cur_mat, l_start_mat, pose_rep="relative", backward=False)
-    r_rel_mat = convert_pose_mat_rep(r_cur_mat, r_start_mat, pose_rep="relative", backward=False)
-
-    l_rel_pose9 = mat_to_pose10d(l_rel_mat)
-    r_rel_pose9 = mat_to_pose10d(r_rel_mat)
-    l_rel_rot6 = l_rel_pose9[3:]
-    r_rel_rot6 = r_rel_pose9[3:]
-
-    inputs["state"] = np.concatenate([l_rel_rot6, r_rel_rot6], axis=-1).astype(np.float32)
+    # Absolute end-effector pose in base frame (pose9 = pos3 + rot6d6), plus per-hand gripper.
+    l_cur_pose9 = mat_to_pose10d(l_cur_mat).astype(np.float32)
+    r_cur_pose9 = mat_to_pose10d(r_cur_mat).astype(np.float32)
+    inputs["state"] = np.concatenate([l_cur_pose9, l_g, r_cur_pose9, r_g], axis=-1).astype(np.float32)
 
     raw_left = data.get("left_action", None)
     raw_right = data.get("right_action", None)
@@ -151,6 +147,7 @@ class DualFrankaHighThirdLumosWristInputs(transforms.DataTransformFn):
             model_type=self.model_type,
             action_dim=self.action_dim,
             action_horizon=self.action_horizon,
+            mask_third_view=False,
         )
 
 
@@ -168,6 +165,7 @@ class DualFrankaHighThirdRealSenseWristInputs(transforms.DataTransformFn):
             model_type=self.model_type,
             action_dim=self.action_dim,
             action_horizon=self.action_horizon,
+            mask_third_view=False,
         )
 
 
@@ -185,6 +183,7 @@ class DualFrankaMaskThirdLumosWristInputs(transforms.DataTransformFn):
             model_type=self.model_type,
             action_dim=self.action_dim,
             action_horizon=self.action_horizon,
+            mask_third_view=True,
         )
 
 
@@ -202,6 +201,7 @@ class DualFrankaMaskThirdRealSenseWristInputs(transforms.DataTransformFn):
             model_type=self.model_type,
             action_dim=self.action_dim,
             action_horizon=self.action_horizon,
+            mask_third_view=True,
         )
 
 
@@ -213,11 +213,6 @@ class DualFrankaDualHandOutputs(transforms.DataTransformFn):
 
     def __call__(self, data: dict) -> dict:
         act = np.asarray(data["actions"], dtype=np.float32)
-        if act.ndim == 1:
-            act = act[None, :]
-        if act.shape[-1] != 20:
-            raise ValueError(f"Expected model actions last-dim=20, got {act.shape}")
-
         l = act[..., :10]
         r = act[..., 10:20]
         l_pose9 = l[..., :9]

@@ -1850,7 +1850,7 @@ _CONFIGS = [
             pi05=True,
             action_dim=32,
             action_horizon=10,
-            discrete_state_input=False,
+            discrete_state_input=False,  # 无state输入!!
         ),
         data=LeRobotDualFrankaDataConfig(
             repo_id="/share/chenshuaiwen-local/.cache/hf_home/dual_franka/handover_high",
@@ -1883,7 +1883,7 @@ _CONFIGS = [
             pi05=True,
             action_dim=32,
             action_horizon=10,
-            discrete_state_input=False,
+            discrete_state_input=False,  # 无state输入!!
         ),
         data=LeRobotDualFrankaDataConfig(
             repo_id="/share/chenshuaiwen-local/.cache/hf_home/dual_franka/handover_mix_high",
@@ -1916,7 +1916,7 @@ _CONFIGS = [
             pi05=True,
             action_dim=32,
             action_horizon=10,
-            discrete_state_input=False,
+            discrete_state_input=False,  # 无state输入!!
         ),
         data=LeRobotDualFrankaDataConfig(
             repo_id="/share/chenshuaiwen-local/.cache/hf_home/dual_franka/handover_high",
@@ -1949,7 +1949,7 @@ _CONFIGS = [
             pi05=True,
             action_dim=32,
             action_horizon=10,
-            discrete_state_input=False,
+            discrete_state_input=False,  # 无state输入!!
         ),
         data=LeRobotDualFrankaDataConfig(
             repo_id="/share/chenshuaiwen-local/.cache/hf_home/dual_franka/reverse_handover_high",
@@ -1976,106 +1976,7 @@ _CONFIGS = [
         batch_size=32,
         checkpoint_base_dir="/share/chenshuaiwen-local/checkpoints",
     ),
-    TrainConfig(
-        name="pi05_dual_franka_finetune_absdelta_high_lumos",
-        model=pi0_config.Pi0Config(
-            pi05=True,
-            action_dim=32,
-            action_horizon=10,
-            discrete_state_input=False,
-        ),
-        data=LeRobotDualFrankaDataConfig(
-            repo_id="/share/chenshuaiwen-local/.cache/hf_home/dual_franka/handover_high_absdelta",
-            variant="absdelta_high_lumos",
-            base_config=DataConfig(
-                prompt_from_task=True,
-                action_sequence_keys=("left_action", "right_action"),
-            ),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader(
-            "/home/chenshuaiwen/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
-        ),
-        lr_schedule=_optimizer.CosineDecaySchedule(
-                warmup_steps=1_000,
-                peak_lr=5e-5,
-                decay_steps=1_000_000,
-                decay_lr=5e-5,
-            ),
-        log_interval=500,
-        save_interval=2000,
-        keep_period=10_000,
-        num_workers=2,
-        num_train_steps=30_000,
-        batch_size=32,
-        checkpoint_base_dir="/share/chenshuaiwen-local/checkpoints",
-    ),
-    TrainConfig(
-        name="pi05_dual_franka_finetune_absdelta_high_rs",
-        model=pi0_config.Pi0Config(
-            pi05=True,
-            action_dim=32,
-            action_horizon=10,
-            discrete_state_input=False,
-        ),
-        data=LeRobotDualFrankaDataConfig(
-            repo_id="/share/chenshuaiwen-local/.cache/hf_home/dual_franka/handover_high_absdelta",
-            variant="absdelta_high_rs",
-            base_config=DataConfig(
-                prompt_from_task=True,
-                action_sequence_keys=("left_action", "right_action"),
-            ),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader(
-            "/home/chenshuaiwen/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
-        ),
-        lr_schedule=_optimizer.CosineDecaySchedule(
-                warmup_steps=1_000,
-                peak_lr=5e-5,
-                decay_steps=1_000_000,
-                decay_lr=5e-5,
-            ),
-        log_interval=500,
-        save_interval=2000,
-        keep_period=10_000,
-        num_workers=2,
-        num_train_steps=30_000,
-        batch_size=16,
-        checkpoint_base_dir="/share/chenshuaiwen-local/checkpoints",
-    ),
-    TrainConfig(
-        name="pi05_dual_franka_finetune_absdelta_mask_lumos",
-        model=pi0_config.Pi0Config(
-            pi05=True,
-            action_dim=32,
-            action_horizon=10,
-            discrete_state_input=False,
-        ),
-        data=LeRobotDualFrankaDataConfig(
-            repo_id="/share/chenshuaiwen-local/.cache/hf_home/dual_franka/handover_high_absdelta",
-            variant="absdelta_mask_lumos",
-            base_config=DataConfig(
-                prompt_from_task=True,
-                action_sequence_keys=("left_action", "right_action"),
-            ),
-        ),
-        weight_loader=weight_loaders.CheckpointWeightLoader(
-            "/home/chenshuaiwen/.cache/openpi/openpi-assets/checkpoints/pi05_base/params"
-        ),
-        lr_schedule=_optimizer.CosineDecaySchedule(
-                warmup_steps=1_000,
-                peak_lr=5e-5,
-                decay_steps=1_000_000,
-                decay_lr=5e-5,
-            ),
-        log_interval=500,
-        save_interval=2000,
-        keep_period=10_000,
-        num_workers=2,
-        num_train_steps=30_000,
-        batch_size=16,
-        checkpoint_base_dir="/share/chenshuaiwen-local/checkpoints",
-    ),
-
+   
     TrainConfig(
         name="pi05_xv13_finetune",
         model=pi0_config.Pi0Config(
