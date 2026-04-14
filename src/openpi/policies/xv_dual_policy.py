@@ -132,8 +132,8 @@ class XVDualInputs(transforms.DataTransformFn):
         # final state: (12,)
         state12 = np.concatenate([l_rel_rot6, r_rel_rot6], axis=-1).astype(np.float32)
         # inputs["state"] = None  # model_transforms will pad to action_dim if needed
-        # inputs["state"] = state12  # model_transforms will pad to action_dim if needed
-        inputs["state"] = None  # model_transforms will pad to action_dim if needed
+        inputs["state"] = state12  # model_transforms will pad to action_dim if needed
+        # inputs["state"] = None  # model_transforms will pad to action_dim if needed
 
 
                 # --------------------------
