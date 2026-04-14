@@ -849,6 +849,9 @@ class LeRobotXVDualDataConfig(DataConfigFactory):
       - task: string
     """
 
+    # 必须指定 action_sequence_keys，让 DataLoader 为 left/right action 采样时间序列
+    action_sequence_keys: Sequence[str] = ("left_action", "right_action")
+
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
         # 1) Repack: map dataset keys -> policy expected keys
@@ -906,6 +909,7 @@ class LeRobotXVDualDataConfig(DataConfigFactory):
             data_transforms=data_transforms,
             model_transforms=model_transforms,
             use_quantile_norm=False,
+            action_sequence_keys=self.action_sequence_keys,
         )
 
 
