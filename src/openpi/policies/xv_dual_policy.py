@@ -131,7 +131,10 @@ class XVDualInputs(transforms.DataTransformFn):
 
         # final state: (12,)
         state12 = np.concatenate([l_rel_rot6, r_rel_rot6], axis=-1).astype(np.float32)
-        inputs["state"] = state12  # model_transforms will pad to action_dim if needed
+        # inputs["state"] = None  # model_transforms will pad to action_dim if needed
+        # inputs["state"] = state12  # model_transforms will pad to action_dim if needed
+        inputs["state"] = None  # model_transforms will pad to action_dim if needed
+
 
                 # --------------------------
         # 3) action chunk:
@@ -249,10 +252,11 @@ class XVDualOutputs(transforms.DataTransformFn):
 
         l_pose9 = l[..., :9]      # (H,9)
         l_grip = l[..., 9:10]     # (H,1)
-
+        l_grip = l_grip / 88.0  # 添加缩放
         r_pose9 = r[..., :9]
         r_grip = r[..., 9:10]
-
+        r_grip = r_grip / 88.0  # 添加缩放
+        # 在 xv_dual_policy.py XVDualOutputs 中
         # pose9 -> mat -> pose6 (pos3 + rotvec3)
         l_mat = pose10d_to_mat(l_pose9)     # (H,4,4)   (relative transform)
         r_mat = pose10d_to_mat(r_pose9)
