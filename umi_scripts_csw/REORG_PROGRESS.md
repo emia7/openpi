@@ -10,6 +10,7 @@
 - 新增 Stage wrapper：
   - `stage1_convert.py`（`--views 1|2|3`）
   - `stage2_convert.py`（`--views 1|2|3`）
+  - 其中 `stage1_convert.py` 已支持 views=1/2 批处理（自动按 serial 候选重试并写日志）。
 - 更新 `README.md` 与 `docs/umi_scripts.md`，补充统一入口说明。
 
 ## 新旧入口映射
@@ -42,4 +43,4 @@
 
 - 在 wrapper 中逐步吸收公共参数与日志格式，减少底层脚本差异。
 - 为 `stage1_convert.py` 增加 `--mode vis/plain`，收敛 `convert_rosbag_to_mp4_vis.py` 与 `convert_ros_data_to_mp4.py`。
-- 把 batch shell（`batch_stage1*.sh`）逐步转成 Python CLI 子命令。
+- 删除冗余 batch shell（`batch_stage1*.sh`），统一保留 Python 入口。

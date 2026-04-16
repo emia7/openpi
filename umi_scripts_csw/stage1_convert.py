@@ -13,18 +13,115 @@ def _scripts_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
-def _run(cmd: list[str]) -> int:
+def _run(cmd: list[str], log_path: Path | None = None) -> int:
     print("Running:", " ".join(cmd))
-    return subprocess.run(cmd, check=False).returncode
+    if log_path is None:
+        return subprocess.run(cmd, check=False).returncode
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8") as f:
+        return subprocess.run(cmd, check=False, stdout=f, stderr=subprocess.STDOUT).returncode
 
 
 def _validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
     if args.views in (1, 2):
-        if not args.bag or not args.serial:
-            parser.error("--views 1/2 require --bag and --serial")
+        if not args.bag and not args.bag_dir:
+            parser.error("--views 1/2 require --bag or --bag_dir")
+        if args.bag and args.bag_dir:
+            parser.error("Use either --bag or --bag_dir for --views 1/2")
+        if args.bag and not args.serial:
+            parser.error("--views 1/2 single mode requires --serial")
     else:
         if not args.bag_dir or args.start_idx is None:
             parser.error("--views 3 requires --bag_dir and --start_idx")
+
+
+def _single_cmd(args: argparse.Namespace, py: str, script: Path, bag: str, serial: str, data_idx: int) -> list[str]:
+    cmd = [
+        py,
+        str(script),
+        "--bag",
+        bag,
+        "--serial",
+        serial,
+        "--out_dir",
+        args.out_dir,
+        "--data_idx",
+        str(data_idx),
+    ]
+    if args.views == 2:
+        cmd.extend(["--head_topic", args.head_topic])
+    return cmd
+
+
+def _expected_outputs(views: int, out_dir: Path, idx: int) -> list[Path]:
+    if views == 1:
+        return [out_dir / f"episode{idx}.mp4", out_dir / f"episode{idx}.json"]
+    return [out_dir / f"episode{idx}_head.mp4", out_dir / f"episode{idx}_left.mp4", out_dir / f"episode{idx}.json"]
+
+
+def _parse_serials(args: argparse.Namespace) -> list[str]:
+    serials: list[str] = []
+    if args.serial:
+        serials.append(args.serial)
+    if args.serials:
+        serials.extend([x.strip() for x in args.serials.split(",") if x.strip()])
+    # Preserve order while deduplicating.
+    unique: list[str] = []
+    for serial in serials:
+        if serial not in unique:
+            unique.append(serial)
+    return unique
+
+
+def _run_batch_views12(args: argparse.Namespace, py: str, script: Path) -> int:
+    if args.start_idx is None:
+        args.start_idx = 0
+    serials = _parse_serials(args)
+    if not serials:
+        raise SystemExit("Batch mode for views 1/2 requires --serial or --serials.")
+
+    bag_dir = Path(args.bag_dir)
+    bags = sorted(bag_dir.glob(args.pattern))
+    if not bags:
+        raise SystemExit(f"No bags found in {bag_dir} with pattern {args.pattern}")
+
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[INFO] Found {len(bags)} bag files. start_idx={args.start_idx}")
+
+    failures = 0
+    for i, bag in enumerate(bags):
+        idx = args.start_idx + i
+        outputs = _expected_outputs(args.views, out_dir, idx)
+        serial_file = out_dir / f"episode{idx}.serial.txt"
+        if args.skip_existing and all(path.exists() for path in outputs) and serial_file.exists():
+            print(f"[SKIP] idx={idx} {bag.name}")
+            continue
+
+        chosen = None
+        for serial in serials:
+            for path in outputs:
+                if path.exists():
+                    path.unlink()
+            if serial_file.exists():
+                serial_file.unlink()
+            log_path = out_dir / f"stage1_{idx}_try_{serial}.log"
+            code = _run(_single_cmd(args, py, script, str(bag), serial, idx), log_path=log_path)
+            if code == 0 and all(path.exists() for path in outputs):
+                chosen = serial
+                serial_file.write_text(serial, encoding="utf-8")
+                print(f"[OK] idx={idx} {bag.name} serial={serial}")
+                break
+            print(f"[FAIL] idx={idx} {bag.name} serial={serial} (see {log_path.name})")
+
+        if chosen is None:
+            failures += 1
+            if not args.continue_on_error:
+                raise SystemExit(f"Batch failed at idx={idx} for {bag.name}.")
+
+    if failures:
+        return 1
+    return 0
 
 
 def main() -> int:
@@ -35,6 +132,7 @@ def main() -> int:
     # Single-bag mode (views=1/2)
     parser.add_argument("--bag", default=None, help="Input rosbag path for views=1/2")
     parser.add_argument("--serial", default=None, help="XV serial for views=1/2")
+    parser.add_argument("--serials", default=None, help="Comma-separated serial candidates for batch views=1/2")
     parser.add_argument("--data_idx", type=int, default=None, help="Episode index for views=1/2")
     parser.add_argument("--head_topic", default="/camera/color/image_raw/compressed", help="Head topic for views=2")
 
@@ -42,6 +140,8 @@ def main() -> int:
     parser.add_argument("--bag_dir", default=None, help="Bag directory for views=3")
     parser.add_argument("--start_idx", type=int, default=None, help="Start index for views=3")
     parser.add_argument("--pattern", default="*.bag", help="Bag glob pattern for views=3")
+    parser.add_argument("--skip_existing", action="store_true", help="Skip batch items with existing outputs")
+    parser.add_argument("--continue_on_error", action="store_true", help="Continue batch when one bag fails")
 
     args = parser.parse_args()
     _validate_args(args, parser)
@@ -51,38 +151,18 @@ def main() -> int:
 
     if args.views == 1:
         script = scripts_dir / "convert_ros_data_to_mp4.py"
+        if args.bag_dir:
+            return _run_batch_views12(args, py, script)
         data_idx = args.data_idx if args.data_idx is not None else 1
-        cmd = [
-            py,
-            str(script),
-            "--bag",
-            args.bag,
-            "--serial",
-            args.serial,
-            "--out_dir",
-            args.out_dir,
-            "--data_idx",
-            str(data_idx),
-        ]
+        cmd = _single_cmd(args, py, script, args.bag, args.serial, data_idx)
         return _run(cmd)
 
     if args.views == 2:
         script = scripts_dir / "convert_rosbag_to_mp4_vis_13.py"
+        if args.bag_dir:
+            return _run_batch_views12(args, py, script)
         data_idx = args.data_idx if args.data_idx is not None else 1
-        cmd = [
-            py,
-            str(script),
-            "--bag",
-            args.bag,
-            "--serial",
-            args.serial,
-            "--out_dir",
-            args.out_dir,
-            "--data_idx",
-            str(data_idx),
-            "--head_topic",
-            args.head_topic,
-        ]
+        cmd = _single_cmd(args, py, script, args.bag, args.serial, data_idx)
         return _run(cmd)
 
     script = scripts_dir / "convert_rosbag_to_mp4_vis_123.py"
