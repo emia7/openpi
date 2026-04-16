@@ -5,20 +5,8 @@ from pathlib import Path
 import numpy as np
 import imageio.v3 as iio
 
-from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
 import stage2_core
-
-
-def pose7_to_pos_rotvec(pose7: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    return stage2_core.pose7_to_pos_rotvec(pose7)
-
-
-def load_episode_json(json_path: Path):
-    return stage2_core.load_episode_json(json_path, default_fps=60.0, require_clamp=False)
-
-
-def compute_stride(orig_fps: float, target_fps: float) -> tuple[int, float]:
-    return stage2_core.compute_stride(orig_fps, target_fps)
+from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
 
 
 def main(
@@ -39,10 +27,10 @@ def main(
     if not first_json.exists():
         raise FileNotFoundError(f"Missing json for first mp4: {first_json}")
 
-    poses0, clamp0, fps0, _ = load_episode_json(first_json)
+    poses0, clamp0, fps0, _ = stage2_core.load_episode_json(first_json, default_fps=60.0, require_clamp=False)
 
     # Downsample config
-    stride, achieved_fps = compute_stride(fps0, float(target_fps))
+    stride, achieved_fps = stage2_core.compute_stride(fps0, float(target_fps))
     fps_int = int(round(achieved_fps))
     fps_int = max(1, fps_int)
 
@@ -128,7 +116,7 @@ def main(
             print(f"[WARN] Missing json for {mp4_path.name}, skip")
             continue
 
-        poses, clamp, fps_meta, T = load_episode_json(json_path)
+        poses, clamp, fps_meta, T = stage2_core.load_episode_json(json_path, default_fps=60.0, require_clamp=False)
 
         if abs(fps_meta - fps0) > 1e-3:
             print(f"[WARN] {json_path.name}: fps={fps_meta} differs from first fps={fps0}. Using stride={stride} anyway.")
@@ -145,7 +133,7 @@ def main(
         episode_end_idx = np.array([T_ds], dtype=np.int64)
 
         # Demo start pose from original first record (t=0)
-        pos0, rotvec0 = pose7_to_pos_rotvec(poses[0])
+        pos0, rotvec0 = stage2_core.pose7_to_pos_rotvec(poses[0])
         demo_start_pose = np.concatenate([pos0, rotvec0], axis=0).astype(np.float32)  # (6,)
 
         # Stream frames strictly: only keep i in ds_indices
@@ -177,14 +165,14 @@ def main(
             frame = np.asarray(frame, dtype=np.uint8)
 
             # ===== observation from i_obs =====
-            pos, rotvec = pose7_to_pos_rotvec(poses[i_obs])
+            pos, rotvec = stage2_core.pose7_to_pos_rotvec(poses[i_obs])
             if use_clamp:
                 gripper_width = np.array([float(clamp[i_obs].item())], dtype=np.float32)
             else:
                 gripper_width = np.array([0.0], dtype=np.float32)
 
             # ===== action = next-state (absolute) from i_next =====
-            pos_n, rotvec_n = pose7_to_pos_rotvec(poses[i_next])
+            pos_n, rotvec_n = stage2_core.pose7_to_pos_rotvec(poses[i_next])
             if use_clamp:
                 grip_n = np.array([float(clamp[i_next].item())], dtype=np.float32)
             else:

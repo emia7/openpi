@@ -11,15 +11,6 @@ import imageio.v3 as iio
 from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
 import stage2_core
 
-
-def pose7_to_pos_rotvec(pose7: np.ndarray):
-    return stage2_core.pose7_to_pos_rotvec(pose7)
-
-
-def load_episode_json(path: Path):
-    return stage2_core.load_episode_json(path, default_fps=10.0, require_clamp=True)
-
-
 def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: int = 0):
     stage1_dir = Path(stage1_dir)
     if not stage1_dir.exists():
@@ -41,7 +32,7 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
     if not (p_left.exists() and p_right.exists() and p_third.exists() and p_right_json.exists()):
         raise FileNotFoundError(f"Missing files for first episode: {stem}")
 
-    poses_l0, clamp_l0, fps0, _ = load_episode_json(first_left_json)
+    poses_l0, clamp_l0, fps0, _ = stage2_core.load_episode_json(first_left_json, default_fps=10.0, require_clamp=True)
 
     # dataset fps
     fps_ds = int(round(fps0))
@@ -109,12 +100,12 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
             continue
 
         # load states (pose7 is [x,y,z,qx,qy,qz,qw] in stage1 json)
-        poses_l7, clamp_l, _, T_l = load_episode_json(left_json)
-        poses_r7, clamp_r, _, T_r = load_episode_json(right_json)
+        poses_l7, clamp_l, _, T_l = stage2_core.load_episode_json(left_json, default_fps=10.0, require_clamp=True)
+        poses_r7, clamp_r, _, T_r = stage2_core.load_episode_json(right_json, default_fps=10.0, require_clamp=True)
 
         # demo start pose (6D) from first frame
-        pos_l0, rot_l0 = pose7_to_pos_rotvec(poses_l7[0])
-        pos_r0, rot_r0 = pose7_to_pos_rotvec(poses_r7[0])
+        pos_l0, rot_l0 = stage2_core.pose7_to_pos_rotvec(poses_l7[0])
+        pos_r0, rot_r0 = stage2_core.pose7_to_pos_rotvec(poses_r7[0])
         demo_left6 = np.concatenate([pos_l0, rot_l0], axis=0).astype(np.float32)
         demo_right6 = np.concatenate([pos_r0, rot_r0], axis=0).astype(np.float32)
 
@@ -137,15 +128,15 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
                 ft = np.asarray(ft, dtype=np.uint8)
 
                 # obs pose7 -> obs pos+rotvec
-                pos_l, rot_l = pose7_to_pos_rotvec(poses_l7[i])
-                pos_r, rot_r = pose7_to_pos_rotvec(poses_r7[i])
+                pos_l, rot_l = stage2_core.pose7_to_pos_rotvec(poses_l7[i])
+                pos_r, rot_r = stage2_core.pose7_to_pos_rotvec(poses_r7[i])
                 g_l = np.array([float(clamp_l[i].item())], dtype=np.float32)
                 g_r = np.array([float(clamp_r[i].item())], dtype=np.float32)
 
                 # action = next step absolute (pos+rotvec+g)
                 j = i + 1 if (i + 1) < T_json else i
-                pos_l2, rot_l2 = pose7_to_pos_rotvec(poses_l7[j])
-                pos_r2, rot_r2 = pose7_to_pos_rotvec(poses_r7[j])
+                pos_l2, rot_l2 = stage2_core.pose7_to_pos_rotvec(poses_l7[j])
+                pos_r2, rot_r2 = stage2_core.pose7_to_pos_rotvec(poses_r7[j])
                 g_l2 = np.array([float(clamp_l[j].item())], dtype=np.float32)
                 g_r2 = np.array([float(clamp_r[j].item())], dtype=np.float32)
 

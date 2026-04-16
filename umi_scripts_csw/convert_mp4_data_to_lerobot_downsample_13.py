@@ -5,20 +5,8 @@ from pathlib import Path
 import numpy as np
 import imageio.v3 as iio
 
-from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
 import stage2_core
-
-
-def pose7_to_pos_rotvec(pose7: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    return stage2_core.pose7_to_pos_rotvec(pose7)
-
-
-def load_episode_json(json_path: Path):
-    return stage2_core.load_episode_json(json_path, default_fps=30.0, require_clamp=False)
-
-
-def compute_stride(orig_fps: float, target_fps: float) -> tuple[int, float]:
-    return stage2_core.compute_stride(orig_fps, target_fps)
+from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
 
 
 def main(
@@ -46,10 +34,10 @@ def main(
     if not path_head_0.exists() or not path_left_0.exists():
         raise FileNotFoundError(f"Missing mp4 files for {ep_stem}")
 
-    poses0, clamp0, fps0, _ = load_episode_json(first_json)
+    poses0, clamp0, fps0, _ = stage2_core.load_episode_json(first_json, default_fps=30.0, require_clamp=False)
 
     # 计算降采样步长
-    stride, achieved_fps = compute_stride(fps0, float(target_fps))
+    stride, achieved_fps = stage2_core.compute_stride(fps0, float(target_fps))
     fps_int = int(round(achieved_fps))
     fps_int = max(1, fps_int)
 
@@ -142,7 +130,7 @@ def main(
             print(f"[SKIP] Missing videos for {ep_stem}")
             continue
 
-        poses, clamp, fps_meta, T_json = load_episode_json(json_path)
+        poses, clamp, fps_meta, T_json = stage2_core.load_episode_json(json_path, default_fps=30.0, require_clamp=False)
 
         if use_clamp and clamp is None:
             raise ValueError(f"{json_path} has no clamp but dataset expects clamp.")
@@ -152,7 +140,7 @@ def main(
         T_target = len(ds_indices)
 
         # Demo Start Pose
-        pos0, rotvec0 = pose7_to_pos_rotvec(poses[0])
+        pos0, rotvec0 = stage2_core.pose7_to_pos_rotvec(poses[0])
         demo_start_pose = np.concatenate([pos0, rotvec0], axis=0).astype(np.float32)
 
         # Video Iterators
@@ -181,7 +169,7 @@ def main(
                 frame_h = np.asarray(frame_h, dtype=np.uint8)
                 frame_l = np.asarray(frame_l, dtype=np.uint8)
 
-                pos, rotvec = pose7_to_pos_rotvec(poses[i_obs])
+                pos, rotvec = stage2_core.pose7_to_pos_rotvec(poses[i_obs])
                 
                 # [修复] 显式构建 array，防止 0-d tensor 错误
                 gw = float(clamp[i_obs].item()) if use_clamp else 0.0
@@ -193,7 +181,7 @@ def main(
                 else:
                     i_next = i_obs
 
-                pos_n, rotvec_n = pose7_to_pos_rotvec(poses[i_next])
+                pos_n, rotvec_n = stage2_core.pose7_to_pos_rotvec(poses[i_next])
                 gw_n = float(clamp[i_next].item()) if use_clamp else 0.0
                 grip_n = np.array([gw_n], dtype=np.float32)
 
