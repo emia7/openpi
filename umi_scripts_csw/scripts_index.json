@@ -1,0 +1,37 @@
+{
+  "stage1_ros_to_mp4_json": [
+    "convert_ros_data_to_mp4.py",
+    "convert_rosbag_to_mp4_vis.py",
+    "convert_rosbag_to_mp4_vis_13.py",
+    "convert_rosbag_to_mp4_vis_123.py"
+  ],
+  "stage2_mp4_json_to_lerobot": [
+    "convert_mp4_data_to_lerobot_downsample.py",
+    "convert_mp4_data_to_lerobot_downsample_13.py",
+    "convert_mp4_data_to_lerobot_123.py"
+  ],
+  "dataset_tools": [
+    "json_sort.py",
+    "json_sort_13.py",
+    "json_sort_123.py",
+    "json_visualize.py",
+    "render_triad_mp4.py",
+    "transform_pose.py",
+    "check_dataset_actions.py",
+    "compare_batches.py",
+    "compare_npz.py"
+  ],
+  "evaluation": [
+    "eval_actions.py",
+    "eval_relative.py",
+    "eval_dual_relative.py",
+    "eval_relative_visualize.py"
+  ],
+  "runtime_helpers": [
+    "tri_image_sampler_10hz.py",
+    "replay_data_fastumi.py",
+    "replay_data_fastumi.sh",
+    "fastumi_helper.py",
+    "start_bringup.sh"
+  ]
+}

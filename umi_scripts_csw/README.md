@@ -15,6 +15,7 @@ python umi_scripts_csw/run.py --script convert_rosbag_to_mp4_vis_13.py -- --help
 - `dataset_tools`: 重命名、可视化、比对、坐标变换等工具。
 - `evaluation`: 评测与可视化脚本。
 - `runtime_helpers`: 采集/回放/便捷控制脚本。
+- 分组清单维护在 `umi_scripts_csw/scripts_index.json`，后续增减脚本优先改这个文件。
 
 ## 说明
 

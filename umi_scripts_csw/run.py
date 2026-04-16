@@ -8,57 +8,27 @@ index for day-to-day usage.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
-
-
-SCRIPT_GROUPS: dict[str, list[str]] = {
-    "stage1_ros_to_mp4_json": [
-        "convert_ros_data_to_mp4.py",
-        "convert_rosbag_to_mp4_vis.py",
-        "convert_rosbag_to_mp4_vis_13.py",
-        "convert_rosbag_to_mp4_vis_123.py",
-    ],
-    "stage2_mp4_json_to_lerobot": [
-        "convert_mp4_data_to_lerobot_downsample.py",
-        "convert_mp4_data_to_lerobot_downsample_13.py",
-        "convert_mp4_data_to_lerobot_123.py",
-    ],
-    "dataset_tools": [
-        "json_sort.py",
-        "json_sort_13.py",
-        "json_sort_123.py",
-        "json_visualize.py",
-        "render_triad_mp4.py",
-        "transform_pose.py",
-        "check_dataset_actions.py",
-        "compare_batches.py",
-        "compare_npz.py",
-    ],
-    "evaluation": [
-        "eval_actions.py",
-        "eval_relative.py",
-        "eval_dual_relative.py",
-        "eval_relative_visualize.py",
-    ],
-    "runtime_helpers": [
-        "tri_image_sampler_10hz.py",
-        "replay_data_fastumi.py",
-        "replay_data_fastumi.sh",
-        "fastumi_helper.py",
-        "start_bringup.sh",
-    ],
-}
-
 
 def _scripts_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
-def _print_index() -> None:
+def _load_script_groups() -> dict[str, list[str]]:
+    index_path = _scripts_dir() / "scripts_index.json"
+    with index_path.open(encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid index format in {index_path}")
+    return {str(key): [str(item) for item in value] for key, value in data.items()}
+
+
+def _print_index(script_groups: dict[str, list[str]]) -> None:
     print("UMI scripts index\n")
-    for group, scripts in SCRIPT_GROUPS.items():
+    for group, scripts in script_groups.items():
         print(f"[{group}]")
         for script in scripts:
             print(f"  - {script}")
@@ -93,9 +63,10 @@ def main() -> int:
     parser.add_argument("--script", type=str, help="Script file name to execute")
     parser.add_argument("args", nargs=argparse.REMAINDER, help="Args passed to target script")
     parsed = parser.parse_args()
+    script_groups = _load_script_groups()
 
     if parsed.list or not parsed.script:
-        _print_index()
+        _print_index(script_groups)
         return 0
 
     passthrough = parsed.args
