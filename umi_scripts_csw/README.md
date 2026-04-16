@@ -8,6 +8,8 @@ python umi_scripts_csw/run.py --list
 python umi_scripts_csw/run.py --list --group evaluation
 python umi_scripts_csw/run.py --find eval
 python umi_scripts_csw/run.py --check
+python umi_scripts_csw/run.py --stage1 -- --views 1 --bag /data/ep001.bag --serial XV_SERIAL --out_dir /data/stage1 --data_idx 1
+python umi_scripts_csw/run.py --stage2 -- --views 2 --stage1_dir /data/stage1 --repo local/my_repo --target_fps 10
 python umi_scripts_csw/run.py --script convert_rosbag_to_mp4_vis_13.py -- --help
 python umi_scripts_csw/stage1_convert.py --views 2 --bag /data/ep001.bag --serial XV_SERIAL --out_dir /data/stage1 --data_idx 1
 python umi_scripts_csw/stage2_convert.py --views 2 --stage1_dir /data/stage1 --repo local/my_repo --target_fps 10

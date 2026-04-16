@@ -77,6 +77,15 @@ def _check_index(script_groups: dict[str, list[str]]) -> int:
     return 0
 
 
+def _run_alias(script_name: str, passthrough: list[str]) -> int:
+    script_path = _scripts_dir() / script_name
+    if not script_path.exists():
+        raise FileNotFoundError(f"Alias target not found: {script_path}")
+    cmd = [sys.executable, str(script_path), *passthrough]
+    print("Running:", " ".join(cmd))
+    return subprocess.run(cmd, check=False).returncode
+
+
 def _find_scripts(script_groups: dict[str, list[str]], keyword: str) -> int:
     lower_keyword = keyword.lower()
     hits: list[tuple[str, str]] = []
@@ -101,6 +110,8 @@ def main() -> int:
     parser.add_argument("--group", type=str, help="Only show one group when listing")
     parser.add_argument("--check", action="store_true", help="Check indexed scripts exist")
     parser.add_argument("--find", type=str, help="Find scripts by keyword")
+    parser.add_argument("--stage1", action="store_true", help="Alias to stage1_convert.py")
+    parser.add_argument("--stage2", action="store_true", help="Alias to stage2_convert.py")
     parser.add_argument("--script", type=str, help="Script file name to execute")
     parser.add_argument("args", nargs=argparse.REMAINDER, help="Args passed to target script")
     parsed = parser.parse_args()
@@ -110,6 +121,16 @@ def main() -> int:
         return _check_index(script_groups)
     if parsed.find:
         return _find_scripts(script_groups, parsed.find)
+    if parsed.stage1:
+        passthrough = parsed.args
+        if passthrough and passthrough[0] == "--":
+            passthrough = passthrough[1:]
+        return _run_alias("stage1_convert.py", passthrough)
+    if parsed.stage2:
+        passthrough = parsed.args
+        if passthrough and passthrough[0] == "--":
+            passthrough = passthrough[1:]
+        return _run_alias("stage2_convert.py", passthrough)
 
     if parsed.list or not parsed.script:
         _print_index(script_groups, parsed.group)
