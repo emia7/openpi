@@ -1,47 +1,24 @@
 import argparse
-import json
 import shutil
 from pathlib import Path
 
 import numpy as np
 import imageio.v3 as iio
-from scipy.spatial.transform import Rotation as R
 
 from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
+import stage2_core
 
 
 def pose7_to_pos_rotvec(pose7: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """pose7: [x,y,z,qx,qy,qz,qw] -> (pos(3,), rotvec(3,))"""
-    pos = pose7[:3].astype(np.float32)
-    quat = pose7[3:7].astype(np.float32)  # (qx,qy,qz,qw)
-    rotvec = R.from_quat(quat).as_rotvec().astype(np.float32)
-    return pos, rotvec
+    return stage2_core.pose7_to_pos_rotvec(pose7)
 
 
 def load_episode_json(json_path: Path):
-    meta = json.loads(json_path.read_text(encoding="utf-8"))
-    records = meta["records"]
-    if len(records) < 2:
-        raise ValueError(f"{json_path} has <2 records, cannot build episode.")
-    poses = np.asarray([r["pose"] for r in records], dtype=np.float32)  # (T,7)
-
-    if "clamp" in records[0]:
-        clamp = np.asarray([r["clamp"] for r in records], dtype=np.float32).reshape(-1, 1)  # (T,1)
-    else:
-        clamp = None
-
-    fps = float(meta.get("fps", 60.0))
-    return poses, clamp, fps, len(records)
+    return stage2_core.load_episode_json(json_path, default_fps=60.0, require_clamp=False)
 
 
 def compute_stride(orig_fps: float, target_fps: float) -> tuple[int, float]:
-    """Return (stride, achieved_fps)."""
-    if target_fps <= 0:
-        raise ValueError("target_fps must be > 0")
-    stride = int(round(orig_fps / target_fps))
-    stride = max(1, stride)
-    achieved_fps = orig_fps / stride
-    return stride, achieved_fps
+    return stage2_core.compute_stride(orig_fps, target_fps)
 
 
 def main(

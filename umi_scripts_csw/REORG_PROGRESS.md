@@ -14,6 +14,7 @@
   - `stage1_convert.py` 已支持 `--mode vis`（views=1）保留单路状态可视化流程。
 - 更新 `README.md` 与 `docs/umi_scripts.md`，补充统一入口说明。
 - 删除 legacy 批处理 shell：`batch_stage1*.sh`（流程已迁移到 Python 入口）。
+- 新增 `stage2_core.py`，抽离 Stage2 三个转换脚本共享的 `pose`/`json`/`stride` 逻辑。
 
 ## 新旧入口映射
 

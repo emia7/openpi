@@ -2,34 +2,22 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import json
 import shutil
 from pathlib import Path
 
 import numpy as np
 import imageio.v3 as iio
-from scipy.spatial.transform import Rotation as R
 
 from lerobot.common.datasets.lerobot_dataset import HF_LEROBOT_HOME, LeRobotDataset
+import stage2_core
 
 
 def pose7_to_pos_rotvec(pose7: np.ndarray):
-    """pose7: [x,y,z,qx,qy,qz,qw] -> pos(3,), rotvec(3,)"""
-    pos = pose7[:3].astype(np.float32)
-    quat = pose7[3:7].astype(np.float32)
-    rotvec = R.from_quat(quat).as_rotvec().astype(np.float32)
-    return pos, rotvec
+    return stage2_core.pose7_to_pos_rotvec(pose7)
 
 
 def load_episode_json(path: Path):
-    meta = json.loads(path.read_text(encoding="utf-8"))
-    records = meta["records"]
-    if len(records) < 2:
-        raise ValueError(f"{path} has <2 records.")
-    poses = np.asarray([r["pose"] for r in records], dtype=np.float32)  # (T,7)
-    clamps = np.asarray([r["clamp"] for r in records], dtype=np.float32).reshape(-1, 1)  # (T,1)
-    fps = float(meta.get("fps", 10.0))
-    return poses, clamps, fps, len(records)
+    return stage2_core.load_episode_json(path, default_fps=10.0, require_clamp=True)
 
 
 def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: int = 0):
