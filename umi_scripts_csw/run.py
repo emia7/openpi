@@ -77,11 +77,30 @@ def _check_index(script_groups: dict[str, list[str]]) -> int:
     return 0
 
 
+def _find_scripts(script_groups: dict[str, list[str]], keyword: str) -> int:
+    lower_keyword = keyword.lower()
+    hits: list[tuple[str, str]] = []
+    for group, scripts in script_groups.items():
+        for script in scripts:
+            if lower_keyword in script.lower() or lower_keyword in group.lower():
+                hits.append((group, script))
+
+    if not hits:
+        print(f"No scripts matched keyword: {keyword}")
+        return 1
+
+    print(f"Matched scripts for keyword: {keyword}\n")
+    for group, script in hits:
+        print(f"[{group}] {script}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Unified launcher for umi_scripts_csw")
     parser.add_argument("--list", action="store_true", help="List scripts by functional group")
     parser.add_argument("--group", type=str, help="Only show one group when listing")
     parser.add_argument("--check", action="store_true", help="Check indexed scripts exist")
+    parser.add_argument("--find", type=str, help="Find scripts by keyword")
     parser.add_argument("--script", type=str, help="Script file name to execute")
     parser.add_argument("args", nargs=argparse.REMAINDER, help="Args passed to target script")
     parsed = parser.parse_args()
@@ -89,6 +108,8 @@ def main() -> int:
 
     if parsed.check:
         return _check_index(script_groups)
+    if parsed.find:
+        return _find_scripts(script_groups, parsed.find)
 
     if parsed.list or not parsed.script:
         _print_index(script_groups, parsed.group)
