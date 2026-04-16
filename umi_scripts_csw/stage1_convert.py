@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import subprocess
 import sys
 from pathlib import Path
@@ -89,14 +90,14 @@ def _run_batch_views12(args: argparse.Namespace, py: str, script: Path) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     print(f"[INFO] Found {len(bags)} bag files. start_idx={args.start_idx}")
 
-    failures = 0
-    for i, bag in enumerate(bags):
-        idx = args.start_idx + i
+    indexed_bags = [(args.start_idx + i, bag) for i, bag in enumerate(bags)]
+
+    def run_one(item: tuple[int, Path]) -> tuple[int, str]:
+        idx, bag = item
         outputs = _expected_outputs(args.views, out_dir, idx)
         serial_file = out_dir / f"episode{idx}.serial.txt"
         if args.skip_existing and all(path.exists() for path in outputs) and serial_file.exists():
-            print(f"[SKIP] idx={idx} {bag.name}")
-            continue
+            return idx, f"[SKIP] idx={idx} {bag.name}"
 
         chosen = None
         for serial in serials:
@@ -110,16 +111,32 @@ def _run_batch_views12(args: argparse.Namespace, py: str, script: Path) -> int:
             if code == 0 and all(path.exists() for path in outputs):
                 chosen = serial
                 serial_file.write_text(serial, encoding="utf-8")
-                print(f"[OK] idx={idx} {bag.name} serial={serial}")
-                break
+                return idx, f"[OK] idx={idx} {bag.name} serial={serial}"
             print(f"[FAIL] idx={idx} {bag.name} serial={serial} (see {log_path.name})")
 
-        if chosen is None:
+        return idx, f"[ERROR] idx={idx} {bag.name} all serial attempts failed"
+
+    failures = 0
+    completed: list[tuple[int, str]] = []
+    max_workers = max(1, args.jobs)
+    if max_workers == 1:
+        for item in indexed_bags:
+            completed.append(run_one(item))
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(run_one, item) for item in indexed_bags]
+            for future in concurrent.futures.as_completed(futures):
+                completed.append(future.result())
+
+    for _, msg in sorted(completed, key=lambda x: x[0]):
+        print(msg)
+        if msg.startswith("[ERROR]"):
             failures += 1
             if not args.continue_on_error:
-                raise SystemExit(f"Batch failed at idx={idx} for {bag.name}.")
+                raise SystemExit("Batch aborted because --continue_on_error is not set.")
 
-    if failures:
+    print(f"[INFO] Batch summary: total={len(indexed_bags)} failures={failures} jobs={max_workers}")
+    if failures > 0:
         return 1
     return 0
 
@@ -140,6 +157,7 @@ def main() -> int:
     parser.add_argument("--bag_dir", default=None, help="Bag directory for views=3")
     parser.add_argument("--start_idx", type=int, default=None, help="Start index for views=3")
     parser.add_argument("--pattern", default="*.bag", help="Bag glob pattern for views=3")
+    parser.add_argument("--jobs", type=int, default=1, help="Parallel workers for views=1/2 batch mode")
     parser.add_argument("--skip_existing", action="store_true", help="Skip batch items with existing outputs")
     parser.add_argument("--continue_on_error", action="store_true", help="Continue batch when one bag fails")
 
