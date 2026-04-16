@@ -34,6 +34,8 @@ def _validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
     else:
         if not args.bag_dir or args.start_idx is None:
             parser.error("--views 3 requires --bag_dir and --start_idx")
+    if args.views != 1 and args.mode != "plain":
+        parser.error("--mode is only supported for --views 1")
 
 
 def _single_cmd(args: argparse.Namespace, py: str, script: Path, bag: str, serial: str, data_idx: str) -> list[str]:
@@ -152,6 +154,7 @@ def _run_batch_views12(args: argparse.Namespace, py: str, script: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Unified stage1 converter launcher")
     parser.add_argument("--views", type=int, choices=[1, 2, 3], required=True, help="Number of camera views")
+    parser.add_argument("--mode", choices=["plain", "vis"], default="plain", help="Conversion mode for views=1")
     parser.add_argument("--out_dir", required=True, help="Output directory")
 
     # Single-bag mode (views=1/2)
@@ -176,7 +179,8 @@ def main() -> int:
     py = sys.executable
 
     if args.views == 1:
-        script = scripts_dir / "convert_ros_data_to_mp4.py"
+        script_name = "convert_ros_data_to_mp4.py" if args.mode == "plain" else "convert_rosbag_to_mp4_vis.py"
+        script = scripts_dir / script_name
         if args.bag_dir:
             return _run_batch_views12(args, py, script)
         data_idx = args.data_idx if args.data_idx is not None else "1"

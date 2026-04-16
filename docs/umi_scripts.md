@@ -52,6 +52,7 @@
 **统一入口（推荐）**：使用 `stage1_convert.py` 代替旧 batch shell。
 
 - 单 bag：`python umi_scripts_csw/stage1_convert.py --views 2 --bag ... --serial ... --out_dir ... --data_idx ...`
+- 单路可视化：`python umi_scripts_csw/stage1_convert.py --views 1 --mode vis --bag ... --serial ... --out_dir ... --data_idx 00001`
 - 批处理（views=1/2）：`python umi_scripts_csw/stage1_convert.py --views 2 --bag_dir ... --out_dir ... --start_idx 0 --serials S1,S2 --jobs 4 --skip_existing`
 - 三视角批处理（views=3）：`python umi_scripts_csw/stage1_convert.py --views 3 --bag_dir ... --out_dir ... --start_idx 0`
 
