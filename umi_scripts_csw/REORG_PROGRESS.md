@@ -18,6 +18,7 @@
 - `stage2_convert.py` 从子进程分发改为进程内分发，成为 Stage2 实际主执行入口。
 - 已移除 `convert_mp4_data_to_lerobot_{downsample,downsample_13,123}.py`，Stage2 只保留 `stage2_convert.py` + `stage2_core.py`。
 - `stage1_convert.py` 也从子进程分发改为进程内调用（views=1/2/3 统一由一个入口执行）。
+- 已移除 `convert_ros{,_vis,_vis_13,_vis_123}.py`，Stage1 只保留 `stage1_convert.py` + `stage1_core.py`。
 
 ## 新旧入口映射
 
@@ -25,13 +26,10 @@
 
 - 1 视角：
   - 新：`run.py --stage1 -- --views 1 ...`
-  - 旧：`convert_ros_data_to_mp4.py`
 - 2 视角：
   - 新：`run.py --stage1 -- --views 2 ...`
-  - 旧：`convert_rosbag_to_mp4_vis_13.py`
 - 3 视角：
   - 新：`run.py --stage1 -- --views 3 ...`
-  - 旧：`convert_rosbag_to_mp4_vis_123.py`
 
 ### Stage2（mp4/json -> LeRobot）
 

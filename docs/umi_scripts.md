@@ -44,10 +44,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `convert_ros_data_to_mp4.py` | 单个 rosbag：按 XV **serial** 对齐图像与 `PoseStampedConfidence`，导出单 episode 的 **mp4 + json**。 |
-| `convert_rosbag_to_mp4_vis.py` | 同上，并带 **matplotlib** 可视化（对齐/轨迹等），便于调试。 |
-| `convert_rosbag_to_mp4_vis_13.py` | **双视角**（如 XV + head/D435），支持压缩图像与更稳健的时间戳；输出命名习惯含 `_head`、`_left` 等。 |
-| `convert_rosbag_to_mp4_vis_123.py` | **三视角**（左/右 XV + 第三路相机）；**topic 与序列号**在文件顶部 **`CONFIG`** 中修改。 |
+| `stage1_convert.py` | **统一入口**：通过 `--views 1/2/3` 与 `--mode plain/vis` 处理单路、双路、三路 rosbag 到 `mp4+json` 的转换。 |
 
 **统一入口（推荐）**：使用 `stage1_convert.py` 代替旧 batch shell。
 
@@ -108,7 +105,7 @@
 ## 推荐流水线（简图）
 
 1. **录包**（可选）`tri_image_sampler_10hz.py` 统一三路 10Hz → `rosbag record`。  
-2. **Stage1**：按相机路数选择 `convert_ros_*.py` + 对应 `batch_stage1*.sh`。  
+2. **Stage1**：`stage1_convert.py --views 1|2|3`。  
 3. **整理命名**：`json_sort.py` / `json_sort_13.py` / `json_sort_123.py`。  
 4. **质检**：`json_visualize.py`、`render_triad_mp4.py`、`compare_batches.py`；坐标与训练不一致时再考虑 `transform_pose.py`。  
 5. **Stage2**：`stage2_convert.py --views 1|2|3`。  
