@@ -1,24 +1,59 @@
 #!/usr/bin/env python3
 """Unified Stage2 launcher: mp4/json -> LeRobot.
 
-This script dispatches to existing stage2 converters to preserve behavior.
+This script is the single Stage2 entrypoint. It directly invokes per-view
+conversion implementations in-process.
 """
 
 from __future__ import annotations
 
 import argparse
-import subprocess
-import sys
-from pathlib import Path
 
 
-def _scripts_dir() -> Path:
-    return Path(__file__).resolve().parent
+def run_stage2(
+    *,
+    views: int,
+    stage1_dir: str,
+    repo: str,
+    robot_type: str | None,
+    task: str,
+    target_fps: float,
+    fps: int,
+) -> int:
+    if views == 1:
+        import convert_mp4_data_to_lerobot_downsample as stage2_v1
 
+        stage2_v1.main(
+            stage1_dir=stage1_dir,
+            repo_name=repo,
+            robot_type=robot_type or "XV",
+            target_fps=target_fps,
+            task_text=task,
+        )
+        return 0
 
-def _run(cmd: list[str]) -> int:
-    print("Running:", " ".join(cmd))
-    return subprocess.run(cmd, check=False).returncode
+    if views == 2:
+        import convert_mp4_data_to_lerobot_downsample_13 as stage2_v2
+
+        stage2_v2.main(
+            stage1_dir=stage1_dir,
+            repo_name=repo,
+            robot_type=robot_type or "XV",
+            target_fps=target_fps,
+            task_text=task,
+        )
+        return 0
+
+    import convert_mp4_data_to_lerobot_123 as stage2_v3
+
+    stage2_v3.main(
+        stage1_dir=stage1_dir,
+        repo=repo,
+        robot_type=robot_type or "XV_DUAL",
+        task=task,
+        fps_override=fps if fps > 0 else 0,
+    )
+    return 0
 
 
 def main() -> int:
@@ -32,61 +67,15 @@ def main() -> int:
     parser.add_argument("--fps", type=int, default=0, help="Override dataset fps for views=3")
     args = parser.parse_args()
 
-    scripts_dir = _scripts_dir()
-    py = sys.executable
-
-    if args.views == 1:
-        script = scripts_dir / "convert_mp4_data_to_lerobot_downsample.py"
-        cmd = [
-            py,
-            str(script),
-            "--stage1_dir",
-            args.stage1_dir,
-            "--repo",
-            args.repo,
-            "--robot_type",
-            args.robot_type or "XV",
-            "--target_fps",
-            str(args.target_fps),
-            "--task",
-            args.task,
-        ]
-        return _run(cmd)
-
-    if args.views == 2:
-        script = scripts_dir / "convert_mp4_data_to_lerobot_downsample_13.py"
-        cmd = [
-            py,
-            str(script),
-            "--stage1_dir",
-            args.stage1_dir,
-            "--repo",
-            args.repo,
-            "--robot_type",
-            args.robot_type or "XV",
-            "--target_fps",
-            str(args.target_fps),
-            "--task",
-            args.task,
-        ]
-        return _run(cmd)
-
-    script = scripts_dir / "convert_mp4_data_to_lerobot_123.py"
-    cmd = [
-        py,
-        str(script),
-        "--stage1_dir",
-        args.stage1_dir,
-        "--repo",
-        args.repo,
-        "--robot_type",
-        args.robot_type or "XV_DUAL",
-        "--task",
-        args.task,
-    ]
-    if args.fps > 0:
-        cmd.extend(["--fps", str(args.fps)])
-    return _run(cmd)
+    return run_stage2(
+        views=args.views,
+        stage1_dir=args.stage1_dir,
+        repo=args.repo,
+        robot_type=args.robot_type,
+        task=args.task,
+        target_fps=args.target_fps,
+        fps=args.fps,
+    )
 
 
 if __name__ == "__main__":

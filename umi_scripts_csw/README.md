@@ -34,5 +34,6 @@ python umi_scripts_csw/stage2_convert.py --views 2 --stage1_dir /data/stage1 --r
 - `stage1_convert.py` 已支持 views=1/2 的批处理模式（`--bag_dir + --serials + --jobs`），用于替代原先 `batch_stage1*.sh` 的核心流程。
 - `--views 1` 可用 `--mode vis` 切到 `convert_rosbag_to_mp4_vis.py`（用于保留状态可视化输出）。
 - 新增 `stage2_convert.py` 作为统一入口：`--views 1|2|3` 分发到原有三个 stage2 转换脚本。
+- `stage2_convert.py` 现在是 Stage2 主入口（进程内按 `--views` 调用对应实现），建议日常只用它。
 - 后续可逐步把同类脚本合并为参数化入口，再逐步清理重复变体（如 `*_13` / `*_123`）。
 - 重构进度与新旧映射见 `umi_scripts_csw/REORG_PROGRESS.md`。
