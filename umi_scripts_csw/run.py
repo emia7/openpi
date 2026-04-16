@@ -104,12 +104,36 @@ def _find_scripts(script_groups: dict[str, list[str]], keyword: str) -> int:
     return 0
 
 
+def _print_examples() -> None:
+    print("Common examples\n")
+    print("# List and discovery")
+    print("python umi_scripts_csw/run.py --list")
+    print("python umi_scripts_csw/run.py --find eval")
+    print()
+    print("# Stage1")
+    print(
+        "python umi_scripts_csw/run.py --stage1 -- --views 2 --bag /data/ep001.bag "
+        "--serial XV_SERIAL --out_dir /data/stage1 --data_idx 1"
+    )
+    print(
+        "python umi_scripts_csw/run.py --stage1 -- --views 2 --bag_dir /data/bags "
+        "--out_dir /data/stage1 --start_idx 0 --serials S1,S2 --jobs 4 --skip_existing"
+    )
+    print()
+    print("# Stage2")
+    print(
+        "python umi_scripts_csw/run.py --stage2 -- --views 2 --stage1_dir /data/stage1 "
+        "--repo local/my_repo --target_fps 10"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Unified launcher for umi_scripts_csw")
     parser.add_argument("--list", action="store_true", help="List scripts by functional group")
     parser.add_argument("--group", type=str, help="Only show one group when listing")
     parser.add_argument("--check", action="store_true", help="Check indexed scripts exist")
     parser.add_argument("--find", type=str, help="Find scripts by keyword")
+    parser.add_argument("--examples", action="store_true", help="Print common command templates")
     parser.add_argument("--stage1", action="store_true", help="Alias to stage1_convert.py")
     parser.add_argument("--stage2", action="store_true", help="Alias to stage2_convert.py")
     parser.add_argument("--script", type=str, help="Script file name to execute")
@@ -121,6 +145,9 @@ def main() -> int:
         return _check_index(script_groups)
     if parsed.find:
         return _find_scripts(script_groups, parsed.find)
+    if parsed.examples:
+        _print_examples()
+        return 0
     if parsed.stage1:
         passthrough = parsed.args
         if passthrough and passthrough[0] == "--":
