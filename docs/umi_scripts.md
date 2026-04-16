@@ -60,9 +60,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `convert_mp4_data_to_lerobot_downsample.py` | **单路** `episode*.mp4` + `episode*.json`，降采样后写入 LeRobot（无多目录随机采样）。 |
-| `convert_mp4_data_to_lerobot_downsample_13.py` | **双路**：`episode*_head.mp4`、`episode*_left.mp4` 与对应 json。 |
-| `convert_mp4_data_to_lerobot_123.py` | **三路**：`episode_*_left` / `_right` / `_third` 的 mp4 与 json，构建多图像特征的数据集。 |
+| `stage2_convert.py` | **统一入口**：通过 `--views 1/2/3` 处理单路、双路、三路 `mp4+json` 到 LeRobot 的转换。 |
 
 **统一入口（推荐）**：使用 `stage2_convert.py`。
 
@@ -113,7 +111,7 @@
 2. **Stage1**：按相机路数选择 `convert_ros_*.py` + 对应 `batch_stage1*.sh`。  
 3. **整理命名**：`json_sort.py` / `json_sort_13.py` / `json_sort_123.py`。  
 4. **质检**：`json_visualize.py`、`render_triad_mp4.py`、`compare_batches.py`；坐标与训练不一致时再考虑 `transform_pose.py`。  
-5. **Stage2**：`convert_mp4_data_to_lerobot_downsample*.py` 或 `convert_mp4_data_to_lerobot_123.py`。  
+5. **Stage2**：`stage2_convert.py --views 1|2|3`。  
 6. **替代路径**：若 Stage1 已是单路 `episode*.mp4+json` 且需多目录随机采样，可用 **`umi_scripts_qiuyi/convert_umi_data_to_lerobot_sampling.py`** 代替 csw 单路 Stage2。  
 7. **Franka 云端包**：直接用 **`convert_franka_data_to_lerobot*.py`**。
 
