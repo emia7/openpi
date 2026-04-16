@@ -63,6 +63,12 @@
 | `convert_mp4_data_to_lerobot_downsample_13.py` | **双路**：`episode*_head.mp4`、`episode*_left.mp4` 与对应 json。 |
 | `convert_mp4_data_to_lerobot_123.py` | **三路**：`episode_*_left` / `_right` / `_third` 的 mp4 与 json，构建多图像特征的数据集。 |
 
+**统一入口（推荐）**：使用 `stage2_convert.py`。
+
+- 单路：`python umi_scripts_csw/stage2_convert.py --views 1 --stage1_dir ... --repo ... --target_fps 10`
+- 双路：`python umi_scripts_csw/stage2_convert.py --views 2 --stage1_dir ... --repo ... --target_fps 10`
+- 三路：`python umi_scripts_csw/stage2_convert.py --views 3 --stage1_dir ... --repo ... --fps 10`
+
 ### 文件整理与可视化、坐标变换
 
 | 文件 | 说明 |
