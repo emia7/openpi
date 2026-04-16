@@ -9,6 +9,7 @@ python umi_scripts_csw/run.py --list --group evaluation
 python umi_scripts_csw/run.py --find eval
 python umi_scripts_csw/run.py --check
 python umi_scripts_csw/run.py --script convert_rosbag_to_mp4_vis_13.py -- --help
+python umi_scripts_csw/stage2_convert.py --views 2 --stage1_dir /data/stage1 --repo local/my_repo --target_fps 10
 ```
 
 ## 功能分组（不改旧脚本路径）
@@ -23,4 +24,5 @@ python umi_scripts_csw/run.py --script convert_rosbag_to_mp4_vis_13.py -- --help
 ## 说明
 
 - 本次重构第一阶段保持 **兼容优先**：旧脚本仍按原路径直接可运行。
+- 新增 `stage2_convert.py` 作为统一入口：`--views 1|2|3` 分发到原有三个 stage2 转换脚本。
 - 后续可逐步把同类脚本合并为参数化入口，再逐步清理重复变体（如 `*_13` / `*_123`）。

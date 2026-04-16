@@ -6,6 +6,7 @@
     "convert_rosbag_to_mp4_vis_123.py"
   ],
   "stage2_mp4_json_to_lerobot": [
+    "stage2_convert.py",
     "convert_mp4_data_to_lerobot_downsample.py",
     "convert_mp4_data_to_lerobot_downsample_13.py",
     "convert_mp4_data_to_lerobot_123.py"
