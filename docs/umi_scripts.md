@@ -49,12 +49,11 @@
 | `convert_rosbag_to_mp4_vis_13.py` | **双视角**（如 XV + head/D435），支持压缩图像与更稳健的时间戳；输出命名习惯含 `_head`、`_left` 等。 |
 | `convert_rosbag_to_mp4_vis_123.py` | **三视角**（左/右 XV + 第三路相机）；**topic 与序列号**在文件顶部 **`CONFIG`** 中修改。 |
 
-**批量 shell**（使用前务必改其中的 **`BAG_DIR` / `OUT_DIR` / `SERIALS` / `PY_SCRIPT`**）：
+**统一入口（推荐）**：使用 `stage1_convert.py` 代替旧 batch shell。
 
-- `batch_stage1.sh` → 调用 `convert_ros_data_to_mp4.py`
-- `batch_stage1_vis.sh` → 调用 `convert_rosbag_to_mp4_vis.py`
-- `batch_stage1_vis_13.sh` → 调用 `convert_rosbag_to_mp4_vis_13.py`
-- `batch_stage1_vis_123.sh`：通用包装，参数传入 bag 目录、输出目录、起始序号、Python 脚本路径
+- 单 bag：`python umi_scripts_csw/stage1_convert.py --views 2 --bag ... --serial ... --out_dir ... --data_idx ...`
+- 批处理（views=1/2）：`python umi_scripts_csw/stage1_convert.py --views 2 --bag_dir ... --out_dir ... --start_idx 0 --serials S1,S2 --skip_existing`
+- 三视角批处理（views=3）：`python umi_scripts_csw/stage1_convert.py --views 3 --bag_dir ... --out_dir ... --start_idx 0`
 
 ### Stage 2：MP4 + JSON → LeRobot
 
