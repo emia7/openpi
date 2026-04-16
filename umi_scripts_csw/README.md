@@ -5,6 +5,8 @@
 
 ```bash
 python umi_scripts_csw/run.py --list
+python umi_scripts_csw/run.py --list --group evaluation
+python umi_scripts_csw/run.py --check
 python umi_scripts_csw/run.py --script convert_rosbag_to_mp4_vis_13.py -- --help
 ```
 

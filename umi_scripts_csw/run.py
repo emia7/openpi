@@ -26,9 +26,11 @@ def _load_script_groups() -> dict[str, list[str]]:
     return {str(key): [str(item) for item in value] for key, value in data.items()}
 
 
-def _print_index(script_groups: dict[str, list[str]]) -> None:
+def _print_index(script_groups: dict[str, list[str]], group_filter: str | None = None) -> None:
     print("UMI scripts index\n")
     for group, scripts in script_groups.items():
+        if group_filter and group != group_filter:
+            continue
         print(f"[{group}]")
         for script in scripts:
             print(f"  - {script}")
@@ -57,16 +59,39 @@ def _run_script(script_name: str, passthrough: list[str]) -> int:
     return completed.returncode
 
 
+def _check_index(script_groups: dict[str, list[str]]) -> int:
+    scripts_dir = _scripts_dir()
+    missing: list[str] = []
+    for group, scripts in script_groups.items():
+        for script in scripts:
+            if not (scripts_dir / script).exists():
+                missing.append(f"{group}: {script}")
+
+    if missing:
+        print("Found missing scripts in index:")
+        for item in missing:
+            print(f"  - {item}")
+        return 1
+
+    print("Index check passed: all indexed scripts exist.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Unified launcher for umi_scripts_csw")
     parser.add_argument("--list", action="store_true", help="List scripts by functional group")
+    parser.add_argument("--group", type=str, help="Only show one group when listing")
+    parser.add_argument("--check", action="store_true", help="Check indexed scripts exist")
     parser.add_argument("--script", type=str, help="Script file name to execute")
     parser.add_argument("args", nargs=argparse.REMAINDER, help="Args passed to target script")
     parsed = parser.parse_args()
     script_groups = _load_script_groups()
 
+    if parsed.check:
+        return _check_index(script_groups)
+
     if parsed.list or not parsed.script:
-        _print_index(script_groups)
+        _print_index(script_groups, parsed.group)
         return 0
 
     passthrough = parsed.args
