@@ -127,3 +127,4 @@
 - [codebase_overview.md](codebase_overview.md)：openpi 整体结构  
 - [norm_stats.md](norm_stats.md)：训练前归一化统计  
 - [remote_inference.md](remote_inference.md)：远端策略服务
+- [../umi_scripts_csw/README.md](../umi_scripts_csw/README.md)：`umi_scripts_csw` 目录内快速入口与分组索引
