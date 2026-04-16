@@ -10,8 +10,10 @@
 - 新增 Stage wrapper：
   - `stage1_convert.py`（`--views 1|2|3`）
   - `stage2_convert.py`（`--views 1|2|3`）
-  - 其中 `stage1_convert.py` 已支持 views=1/2 批处理（自动按 serial 候选重试并写日志）。
+  - `stage1_convert.py` 已支持 views=1/2 批处理（自动按 serial 候选重试并写日志），并支持 `--jobs` 并行。
+  - `stage1_convert.py` 已支持 `--mode vis`（views=1）保留单路状态可视化流程。
 - 更新 `README.md` 与 `docs/umi_scripts.md`，补充统一入口说明。
+- 删除 legacy 批处理 shell：`batch_stage1*.sh`（流程已迁移到 Python 入口）。
 
 ## 新旧入口映射
 
@@ -39,8 +41,11 @@
   - 新：`run.py --stage2 -- --views 3 ...`
   - 旧：`convert_mp4_data_to_lerobot_123.py`
 
-## 下一步建议
+## 合并前建议检查
 
-- 在 wrapper 中逐步吸收公共参数与日志格式，减少底层脚本差异。
-- 为 `stage1_convert.py` 增加 `--mode vis/plain`，收敛 `convert_rosbag_to_mp4_vis.py` 与 `convert_ros_data_to_mp4.py`。
-- 删除冗余 batch shell（`batch_stage1*.sh`），统一保留 Python 入口。
+- 用一小批 bag 验证 `stage1_convert.py`：
+  - `--views 1 --mode plain`
+  - `--views 1 --mode vis`
+  - `--views 2 --jobs N --serials S1,S2`
+- 用同一份 stage1 输出验证 `stage2_convert.py --views 1/2/3` 的字段与下游配置一致。
+- 若团队确认稳定，可在后续 PR 再考虑把更多 legacy 脚本迁移到统一 wrapper（当前保持兼容，不做侵入式合并）。
