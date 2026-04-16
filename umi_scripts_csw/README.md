@@ -30,3 +30,4 @@ python umi_scripts_csw/stage2_convert.py --views 2 --stage1_dir /data/stage1 --r
 - 新增 `stage1_convert.py` 作为统一入口：`--views 1|2|3` 分发到原有 stage1 脚本（1/2 单 bag，3 批处理）。
 - 新增 `stage2_convert.py` 作为统一入口：`--views 1|2|3` 分发到原有三个 stage2 转换脚本。
 - 后续可逐步把同类脚本合并为参数化入口，再逐步清理重复变体（如 `*_13` / `*_123`）。
+- 重构进度与新旧映射见 `umi_scripts_csw/REORG_PROGRESS.md`。
