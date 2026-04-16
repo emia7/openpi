@@ -36,7 +36,7 @@ def _validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
             parser.error("--views 3 requires --bag_dir and --start_idx")
 
 
-def _single_cmd(args: argparse.Namespace, py: str, script: Path, bag: str, serial: str, data_idx: int) -> list[str]:
+def _single_cmd(args: argparse.Namespace, py: str, script: Path, bag: str, serial: str, data_idx: str) -> list[str]:
     cmd = [
         py,
         str(script),
@@ -47,17 +47,24 @@ def _single_cmd(args: argparse.Namespace, py: str, script: Path, bag: str, seria
         "--out_dir",
         args.out_dir,
         "--data_idx",
-        str(data_idx),
+        data_idx,
     ]
     if args.views == 2:
         cmd.extend(["--head_topic", args.head_topic])
     return cmd
 
 
-def _expected_outputs(views: int, out_dir: Path, idx: int) -> list[Path]:
+def _format_batch_data_idx(views: int, idx: int) -> str:
+    # Keep legacy naming conventions used by old batch shell scripts.
     if views == 1:
-        return [out_dir / f"episode{idx}.mp4", out_dir / f"episode{idx}.json"]
-    return [out_dir / f"episode{idx}_head.mp4", out_dir / f"episode{idx}_left.mp4", out_dir / f"episode{idx}.json"]
+        return f"{idx:05d}"
+    return f"{idx:04d}"
+
+
+def _expected_outputs(views: int, out_dir: Path, data_idx: str) -> list[Path]:
+    if views == 1:
+        return [out_dir / f"episode{data_idx}.mp4", out_dir / f"episode{data_idx}.json"]
+    return [out_dir / f"episode{data_idx}_head.mp4", out_dir / f"episode{data_idx}_left.mp4", out_dir / f"episode{data_idx}.json"]
 
 
 def _parse_serials(args: argparse.Namespace) -> list[str]:
@@ -94,7 +101,8 @@ def _run_batch_views12(args: argparse.Namespace, py: str, script: Path) -> int:
 
     def run_one(item: tuple[int, Path]) -> tuple[int, str]:
         idx, bag = item
-        outputs = _expected_outputs(args.views, out_dir, idx)
+        data_idx = _format_batch_data_idx(args.views, idx)
+        outputs = _expected_outputs(args.views, out_dir, data_idx)
         serial_file = out_dir / f"episode{idx}.serial.txt"
         if args.skip_existing and all(path.exists() for path in outputs) and serial_file.exists():
             return idx, f"[SKIP] idx={idx} {bag.name}"
@@ -107,7 +115,7 @@ def _run_batch_views12(args: argparse.Namespace, py: str, script: Path) -> int:
             if serial_file.exists():
                 serial_file.unlink()
             log_path = out_dir / f"stage1_{idx}_try_{serial}.log"
-            code = _run(_single_cmd(args, py, script, str(bag), serial, idx), log_path=log_path)
+            code = _run(_single_cmd(args, py, script, str(bag), serial, data_idx), log_path=log_path)
             if code == 0 and all(path.exists() for path in outputs):
                 chosen = serial
                 serial_file.write_text(serial, encoding="utf-8")
@@ -150,7 +158,7 @@ def main() -> int:
     parser.add_argument("--bag", default=None, help="Input rosbag path for views=1/2")
     parser.add_argument("--serial", default=None, help="XV serial for views=1/2")
     parser.add_argument("--serials", default=None, help="Comma-separated serial candidates for batch views=1/2")
-    parser.add_argument("--data_idx", type=int, default=None, help="Episode index for views=1/2")
+    parser.add_argument("--data_idx", default=None, help="Episode index for views=1/2 (string allowed, e.g. 0001)")
     parser.add_argument("--head_topic", default="/camera/color/image_raw/compressed", help="Head topic for views=2")
 
     # Batch mode (views=3)
@@ -171,16 +179,16 @@ def main() -> int:
         script = scripts_dir / "convert_ros_data_to_mp4.py"
         if args.bag_dir:
             return _run_batch_views12(args, py, script)
-        data_idx = args.data_idx if args.data_idx is not None else 1
-        cmd = _single_cmd(args, py, script, args.bag, args.serial, data_idx)
+        data_idx = args.data_idx if args.data_idx is not None else "1"
+        cmd = _single_cmd(args, py, script, args.bag, args.serial, str(data_idx))
         return _run(cmd)
 
     if args.views == 2:
         script = scripts_dir / "convert_rosbag_to_mp4_vis_13.py"
         if args.bag_dir:
             return _run_batch_views12(args, py, script)
-        data_idx = args.data_idx if args.data_idx is not None else 1
-        cmd = _single_cmd(args, py, script, args.bag, args.serial, data_idx)
+        data_idx = args.data_idx if args.data_idx is not None else "1"
+        cmd = _single_cmd(args, py, script, args.bag, args.serial, str(data_idx))
         return _run(cmd)
 
     script = scripts_dir / "convert_rosbag_to_mp4_vis_123.py"
