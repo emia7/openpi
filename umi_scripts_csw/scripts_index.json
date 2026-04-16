@@ -1,10 +1,6 @@
 {
   "stage1_ros_to_mp4_json": [
-    "stage1_convert.py",
-    "convert_ros_data_to_mp4.py",
-    "convert_rosbag_to_mp4_vis.py",
-    "convert_rosbag_to_mp4_vis_13.py",
-    "convert_rosbag_to_mp4_vis_123.py"
+    "stage1_convert.py"
   ],
   "stage2_mp4_json_to_lerobot": [
     "stage2_convert.py"

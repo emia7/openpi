@@ -5,8 +5,6 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
-import subprocess
-import sys
 from pathlib import Path
 
 
@@ -14,13 +12,43 @@ def _scripts_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
-def _run(cmd: list[str], log_path: Path | None = None) -> int:
-    print("Running:", " ".join(cmd))
+def _run_single(
+    args: argparse.Namespace,
+    bag: str,
+    serial: str,
+    data_idx: str,
+    log_path: Path | None = None,
+) -> int:
+    # Delay imports so --help works without ROS deps.
+    if args.views == 1 and args.mode == "vis":
+        import convert_rosbag_to_mp4_vis as impl
+    elif args.views == 1:
+        import convert_ros_data_to_mp4 as impl
+    else:
+        import convert_rosbag_to_mp4_vis_13 as impl
+
     if log_path is None:
-        return subprocess.run(cmd, check=False).returncode
+        if args.views == 2:
+            impl.main(bag, serial, args.out_dir, int(data_idx), args.head_topic)
+        else:
+            impl.main(bag, serial, args.out_dir, int(data_idx))
+        return 0
+
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("w", encoding="utf-8") as f:
-        return subprocess.run(cmd, check=False, stdout=f, stderr=subprocess.STDOUT).returncode
+        import contextlib
+        import traceback
+
+        with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+            try:
+                if args.views == 2:
+                    impl.main(bag, serial, args.out_dir, int(data_idx), args.head_topic)
+                else:
+                    impl.main(bag, serial, args.out_dir, int(data_idx))
+                return 0
+            except Exception:
+                traceback.print_exc()
+                return 1
 
 
 def _validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
@@ -36,24 +64,6 @@ def _validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser) ->
             parser.error("--views 3 requires --bag_dir and --start_idx")
     if args.views != 1 and args.mode != "plain":
         parser.error("--mode is only supported for --views 1")
-
-
-def _single_cmd(args: argparse.Namespace, py: str, script: Path, bag: str, serial: str, data_idx: str) -> list[str]:
-    cmd = [
-        py,
-        str(script),
-        "--bag",
-        bag,
-        "--serial",
-        serial,
-        "--out_dir",
-        args.out_dir,
-        "--data_idx",
-        data_idx,
-    ]
-    if args.views == 2:
-        cmd.extend(["--head_topic", args.head_topic])
-    return cmd
 
 
 def _format_batch_data_idx(views: int, idx: int) -> str:
@@ -83,7 +93,7 @@ def _parse_serials(args: argparse.Namespace) -> list[str]:
     return unique
 
 
-def _run_batch_views12(args: argparse.Namespace, py: str, script: Path) -> int:
+def _run_batch_views12(args: argparse.Namespace) -> int:
     if args.start_idx is None:
         args.start_idx = 0
     serials = _parse_serials(args)
@@ -117,7 +127,7 @@ def _run_batch_views12(args: argparse.Namespace, py: str, script: Path) -> int:
             if serial_file.exists():
                 serial_file.unlink()
             log_path = out_dir / f"stage1_{idx}_try_{serial}.log"
-            code = _run(_single_cmd(args, py, script, str(bag), serial, data_idx), log_path=log_path)
+            code = _run_single(args, str(bag), serial, data_idx, log_path=log_path)
             if code == 0 and all(path.exists() for path in outputs):
                 chosen = serial
                 serial_file.write_text(serial, encoding="utf-8")
@@ -175,40 +185,40 @@ def main() -> int:
     args = parser.parse_args()
     _validate_args(args, parser)
 
-    scripts_dir = _scripts_dir()
-    py = sys.executable
-
     if args.views == 1:
-        script_name = "convert_ros_data_to_mp4.py" if args.mode == "plain" else "convert_rosbag_to_mp4_vis.py"
-        script = scripts_dir / script_name
         if args.bag_dir:
-            return _run_batch_views12(args, py, script)
+            return _run_batch_views12(args)
         data_idx = args.data_idx if args.data_idx is not None else "1"
-        cmd = _single_cmd(args, py, script, args.bag, args.serial, str(data_idx))
-        return _run(cmd)
+        return _run_single(args, args.bag, args.serial, str(data_idx))
 
     if args.views == 2:
-        script = scripts_dir / "convert_rosbag_to_mp4_vis_13.py"
         if args.bag_dir:
-            return _run_batch_views12(args, py, script)
+            return _run_batch_views12(args)
         data_idx = args.data_idx if args.data_idx is not None else "1"
-        cmd = _single_cmd(args, py, script, args.bag, args.serial, str(data_idx))
-        return _run(cmd)
+        return _run_single(args, args.bag, args.serial, str(data_idx))
 
-    script = scripts_dir / "convert_rosbag_to_mp4_vis_123.py"
-    cmd = [
-        py,
-        str(script),
-        "--bag_dir",
-        args.bag_dir,
-        "--out_dir",
-        args.out_dir,
-        "--start_idx",
-        str(args.start_idx),
-        "--pattern",
-        args.pattern,
-    ]
-    return _run(cmd)
+    import convert_rosbag_to_mp4_vis_123 as impl123
+
+    # Reuse legacy parser contract through direct function call.
+    # This path is already batch-oriented.
+    class _Args:
+        bag_dir: str = args.bag_dir
+        out_dir: str = args.out_dir
+        start_idx: int = int(args.start_idx)
+        pattern: str = args.pattern
+
+    # Monkeypatch parse_args workflow by calling conversion loop directly.
+    bag_dir = Path(_Args.bag_dir)
+    out_dir = Path(_Args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    bags = sorted(bag_dir.glob(_Args.pattern))
+    if not bags:
+        raise SystemExit(f"No bags found in {bag_dir} with pattern {_Args.pattern}")
+    idx = _Args.start_idx
+    for bag_path in bags:
+        impl123.convert_one_bag(bag_path, out_dir, idx)
+        idx += 1
+    return 0
 
 
 if __name__ == "__main__":

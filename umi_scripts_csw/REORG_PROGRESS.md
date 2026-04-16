@@ -17,6 +17,7 @@
 - 新增 `stage2_core.py`，抽离 Stage2 三个转换脚本共享的 `pose`/`json`/`stride` 逻辑。
 - `stage2_convert.py` 从子进程分发改为进程内分发，成为 Stage2 实际主执行入口。
 - 已移除 `convert_mp4_data_to_lerobot_{downsample,downsample_13,123}.py`，Stage2 只保留 `stage2_convert.py` + `stage2_core.py`。
+- `stage1_convert.py` 也从子进程分发改为进程内调用（views=1/2/3 统一由一个入口执行）。
 
 ## 新旧入口映射
 
