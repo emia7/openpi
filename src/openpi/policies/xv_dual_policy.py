@@ -102,19 +102,19 @@ class XVDualInputs(transforms.DataTransformFn):
         # 2) Low-dim obs state (UMI-style inter-gripper proprioception)
         # --------------------------
         # New design: Use Foundation Pose based inter-gripper state
-        # State includes: left_world_pos + hands_rel_xyz + hands_rel_rot6d = 12D
+        # State: hands_rel_xyz (3D) + hands_rel_rot6d (6D) = 9D total
         
         # Check if new features are available (Foundation Pose based)
-        if "hands_rel_xyz" in data and "hands_rel_rot6d" in data and "left_world_pos" in data:
+        if "hands_rel_xyz" in data and "hands_rel_rot6d" in data:
             # Use new inter-gripper state (preferred)
             hands_rel_xyz = np.asarray(data["hands_rel_xyz"], np.float32)      # (3,)
             hands_rel_rot6d = np.asarray(data["hands_rel_rot6d"], np.float32)  # (6,)
-            left_world_pos = np.asarray(data["left_world_pos"], np.float32)   # (3,)
             
-            # State: 12D (left_world_pos + hands_rel_xyz + hands_rel_rot6d)
-            state12 = np.concatenate([left_world_pos, hands_rel_xyz, hands_rel_rot6d], axis=-1).astype(np.float32)
+            # State: 9D (hands_rel_xyz + hands_rel_rot6d)
+            state9 = np.concatenate([hands_rel_xyz, hands_rel_rot6d], axis=-1).astype(np.float32)
+            inputs["state"] = state9
         else:
-            # Fallback: Use legacy relative-to-demo-start rotation state
+            # Fallback: Use legacy relative-to-demo-start rotation state (12D)
             l_pos = np.asarray(data["left_eef_pos"], np.float32)
             l_rot = np.asarray(data["left_eef_rotvec"], np.float32)
             r_pos = np.asarray(data["right_eef_pos"], np.float32)
@@ -136,10 +136,9 @@ class XVDualInputs(transforms.DataTransformFn):
             l_rel_rot6 = l_rel_pose9[3:]
             r_rel_rot6 = r_rel_pose9[3:]
             
-            # Legacy state: only rotations, no position info
+            # Legacy state: only rotations, no position info (12D)
             state12 = np.concatenate([l_rel_rot6, r_rel_rot6], axis=-1).astype(np.float32)
-            
-        inputs["state"] = state12  # model_transforms will pad to action_dim if needed
+            inputs["state"] = state12  # model_transforms will pad to action_dim if needed
 
 
                 # --------------------------

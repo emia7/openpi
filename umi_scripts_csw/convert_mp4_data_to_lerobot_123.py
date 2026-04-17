@@ -107,12 +107,9 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
             "left_pose_cam": {"dtype": "float32", "shape": (7,), "names": ["x", "y", "z", "qx", "qy", "qz", "qw"]},
             "right_pose_cam": {"dtype": "float32", "shape": (7,), "names": ["x", "y", "z", "qx", "qy", "qz", "qw"]},
 
-            # Inter-gripper relative state (right hand in left hand frame)
+            # Inter-gripper relative state (right hand in left hand frame) - 9D total
             "hands_rel_xyz": {"dtype": "float32", "shape": (3,), "names": ["dx", "dy", "dz"]},
             "hands_rel_rot6d": {"dtype": "float32", "shape": (6,), "names": ["r0", "r1", "r2", "r3", "r4", "r5"]},
-
-            # Left hand position in world frame (first frame left hand as origin)
-            "left_world_pos": {"dtype": "float32", "shape": (3,), "names": ["wx", "wy", "wz"]},
 
             # actions: next-step absolute pose+grip for each hand
             "left_action": {"dtype": "float32", "shape": (7,), "names": ["x", "y", "z", "rx", "ry", "rz", "g"]},
@@ -252,24 +249,21 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
                     # Compute inter-gripper relative pose (right hand in left hand frame)
                     T_right_in_left_i = np.linalg.inv(T_left_world_i) @ T_right_world_i
                     
-                    # Extract features
+                    # Extract features: only inter-gripper relative (9D total)
                     hands_rel_xyz = T_right_in_left_i[:3, 3].astype(np.float32)           # (3,)
                     hands_rel_rot6d = mat_to_rot6d(T_right_in_left_i[:3, :3]).astype(np.float32)  # (6,)
-                    left_world_pos = T_left_world_i[:3, 3].astype(np.float32)           # (3,)
                     
                     # Add to current frame (as 1D arrays for LeRobot)
                     frame_data["left_pose_cam"] = mat_to_pose7(T_left_cam_i).astype(np.float32)
                     frame_data["right_pose_cam"] = mat_to_pose7(T_right_cam_i).astype(np.float32)
                     frame_data["hands_rel_xyz"] = hands_rel_xyz
                     frame_data["hands_rel_rot6d"] = hands_rel_rot6d
-                    frame_data["left_world_pos"] = left_world_pos
                 else:
                     # Fill with zeros if Foundation Pose not available
                     frame_data["left_pose_cam"] = np.zeros(7, dtype=np.float32)
                     frame_data["right_pose_cam"] = np.zeros(7, dtype=np.float32)
                     frame_data["hands_rel_xyz"] = np.zeros(3, dtype=np.float32)
                     frame_data["hands_rel_rot6d"] = np.zeros(6, dtype=np.float32)
-                    frame_data["left_world_pos"] = np.zeros(3, dtype=np.float32)
 
                 dataset.add_frame(frame_data)
                 written += 1
