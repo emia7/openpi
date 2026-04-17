@@ -69,9 +69,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `json_sort.py` | 对 `episode*.mp4/.json` 等 **两阶段重命名** 为连续编号，避免覆盖；支持 dry-run / `--apply`。 |
-| `json_sort_13.py` | 带 **`_head` / `_left` / `_states`** 等后缀的 **成组** 重命名。 |
-| `json_sort_123.py` | 处理 `episode_000001_left`、`…_right`、`…_third`、`…_alignment` 等命名规则的排序与改名。 |
+| `json_sort.py` | **统一重命名入口**：支持 compact/underscore 命名风格，自动处理 `_head/_left/_right/_third/_states/_alignment` 等后缀并做两阶段改名。 |
 | `json_visualize.py` | 绘制单条 json 中的 **pose / clamp** 等时间序列。 |
 | `render_triad_mp4.py` | 由 pose 序列渲染 **3D 坐标系 + 轨迹 MP4**。 |
 | `transform_pose.py` | 对 json 内每条 `pose` 做 **固定轴系变换**，输出新 json；使用前需与 **policy / 训练坐标约定** 一致。 |
@@ -106,7 +104,7 @@
 
 1. **录包**（可选）`tri_image_sampler_10hz.py` 统一三路 10Hz → `rosbag record`。  
 2. **Stage1**：`stage1_convert.py --views 1|2|3`。  
-3. **整理命名**：`json_sort.py` / `json_sort_13.py` / `json_sort_123.py`。  
+3. **整理命名**：`json_sort.py`。  
 4. **质检**：`json_visualize.py`、`render_triad_mp4.py`、`compare_batches.py`；坐标与训练不一致时再考虑 `transform_pose.py`。  
 5. **Stage2**：`stage2_convert.py --views 1|2|3`。  
 6. **替代路径**：若 Stage1 已是单路 `episode*.mp4+json` 且需多目录随机采样，可用 **`umi_scripts_qiuyi/convert_umi_data_to_lerobot_sampling.py`** 代替 csw 单路 Stage2。  

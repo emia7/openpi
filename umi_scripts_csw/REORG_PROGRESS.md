@@ -19,6 +19,7 @@
 - 已移除 `convert_mp4_data_to_lerobot_{downsample,downsample_13,123}.py`，Stage2 只保留 `stage2_convert.py` + `stage2_core.py`。
 - `stage1_convert.py` 也从子进程分发改为进程内调用（views=1/2/3 统一由一个入口执行）。
 - 已移除 `convert_ros{,_vis,_vis_13,_vis_123}.py`，Stage1 只保留 `stage1_convert.py` + `stage1_core.py`。
+- `json_sort.py` 已统一吸收 `json_sort_13.py/json_sort_123.py` 的主要能力，重命名工具收敛为单脚本入口。
 
 ## 新旧入口映射
 

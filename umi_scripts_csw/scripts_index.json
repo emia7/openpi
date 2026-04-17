@@ -7,8 +7,6 @@
   ],
   "dataset_tools": [
     "json_sort.py",
-    "json_sort_13.py",
-    "json_sort_123.py",
     "json_visualize.py",
     "render_triad_mp4.py",
     "transform_pose.py",
