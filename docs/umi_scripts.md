@@ -125,4 +125,4 @@
 - [norm_stats.md](norm_stats.md)：训练前归一化统计  
 - [remote_inference.md](remote_inference.md)：远端策略服务
 - [../umi_scripts_csw/README.md](../umi_scripts_csw/README.md)：`umi_scripts_csw` 目录内快速入口与分组索引
-- [fastumi_pro_current_workflow.md](fastumi_pro_current_workflow.md)：FastUMI Pro 当前统一流程（重构后）
+- [fastumi_pro_current_workflow.md](fastumi_pro_current_workflow.md)：FastUMI Pro 安装与端到端流程（权威文档，随分支更新）
