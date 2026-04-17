@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified relative-eval script for single/dual setups."""
+"""Unified eval entrypoint for relative + transform export."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import dataclasses
 from pathlib import Path
 
 import jax
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 
 from openpi.policies import policy_config
@@ -146,35 +146,78 @@ def _plot_single_step(
         plt.close()
 
 
-def main():
-    ap = argparse.ArgumentParser(description="Unified relative eval for single/dual modes")
-    ap.add_argument("--mode", choices=["single", "dual"], default="single")
-    ap.add_argument("--config", required=True)
-    ap.add_argument("--exp-name", required=True)
-    ap.add_argument("--step", type=int, required=True)
-    ap.add_argument("--repo", required=True, help="LeRobot dataset root path")
-    ap.add_argument("--episode", type=int, default=0)
-    ap.add_argument("--out-dir", default="eval_relative_results")
-    ap.add_argument("--dims", type=int, default=20)
-    ap.add_argument("--compare-steps", default="0", help="e.g. 0,1,2 or all")
-    ap.add_argument("--max-plots-per-dim", type=int, default=4)
-    ap.add_argument("--use-time-axis", action="store_true")
-    ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--ckpt-base", default="/mnt/public1/chenshuaiwen/checkpoints")
-    args = ap.parse_args()
+def _pick_active_image_key(image_dict: dict, image_mask_dict: dict) -> str:
+    true_keys = []
+    for k, v in image_mask_dict.items():
+        try:
+            if bool(v):
+                true_keys.append(k)
+        except Exception:
+            pass
+    if true_keys:
+        return sorted(true_keys)[0]
+    return sorted(list(image_dict.keys()))[0]
 
-    out_dir = Path(args.out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    train_cfg = _config.get_config(args.config)
-    train_cfg = dataclasses.replace(train_cfg, exp_name=args.exp_name)
-    ckpt_dir = Path(args.ckpt_base) / args.config / args.exp_name / str(args.step)
-    policy = policy_config.create_trained_policy(train_cfg, str(ckpt_dir))
-    input_transform = policy._input_transform
-    if input_transform is None:
-        raise RuntimeError("No input transform found.")
-    horizon = int(getattr(input_transform, "action_horizon", 16))
-    policy._output_transform = IdentityTransform()
 
+def _ensure_uint8_hwc(img: np.ndarray) -> np.ndarray:
+    img = np.asarray(img)
+    if img.ndim == 3 and img.shape[0] == 3:
+        img = np.transpose(img, (1, 2, 0))
+    if img.dtype != np.uint8:
+        img = np.clip(img, 0, 255).astype(np.uint8)
+    return img
+
+
+def _run_transform_export(args, ds, idxs, input_transform, horizon, fps, out_dir):
+    import imageio.v2 as imageio
+
+    mp4_name = args.mp4_name or f"ep{args.episode:04d}_transformed.mp4"
+    mp4_path = out_dir / mp4_name
+    writer = imageio.get_writer(str(mp4_path), fps=fps)
+
+    t_list, prompt_list, state_list, actions_list = [], [], [], []
+    image_key_used = None
+    for k, gi in enumerate(idxs):
+        sample = ds[gi]
+        raw_data = _build_single_raw(sample)
+        gt_seq, _ = _collect_gt_sequence(ds, idxs, k, horizon, "single")
+        raw_data["actions"] = gt_seq
+        transformed = input_transform(raw_data)
+
+        img_dict = transformed["image"]
+        mask_dict = transformed["image_mask"]
+        if image_key_used is None:
+            image_key_used = _pick_active_image_key(img_dict, mask_dict)
+        frame = _ensure_uint8_hwc(img_dict[image_key_used])
+        writer.append_data(frame)
+
+        t_list.append(k / fps)
+        prompt_list.append(str(transformed.get("prompt", "")))
+        state = transformed.get("state", np.zeros((0,), dtype=np.float32))
+        state_list.append(np.asarray(_to_numpy(state), dtype=np.float32))
+        acts = transformed.get("actions")
+        actions_list.append(None if acts is None else _to_numpy(acts).astype(np.float32))
+
+    writer.close()
+    t = np.asarray(t_list, dtype=np.float32)
+    state_arr = np.stack(state_list, axis=0).astype(np.float32)
+    actions_arr = (
+        np.array(actions_list, dtype=object)
+        if any(a is None for a in actions_list)
+        else np.stack(actions_list, axis=0).astype(np.float32)
+    )
+    np.savez(
+        out_dir / f"ep{args.episode:04d}_transformed_inputs.npz",
+        t=t,
+        state=state_arr,
+        actions=actions_arr,
+        prompt=np.array(prompt_list, dtype=object),
+        image_key=np.array([image_key_used], dtype=object),
+    )
+    print(f"[OK] Saved transformed mp4+npz to: {out_dir.resolve()}")
+
+
+def _run_relative_eval(args, ds, idxs, policy, input_transform, horizon, fps, out_dir):
     if args.compare_steps.lower() == "all":
         compare_steps = list(range(horizon))
     else:
@@ -182,13 +225,6 @@ def main():
         compare_steps = [s for s in compare_steps if 0 <= s < horizon]
         if not compare_steps:
             compare_steps = [0]
-
-    ds = LeRobotDataset(repo_id="local_eval", root=args.repo)
-    fps = _get_fps(ds, default=10.0)
-    episodes = ds.meta["episodes"] if isinstance(ds.meta, dict) else ds.meta.episodes
-    ep_meta = episodes[args.episode] if isinstance(episodes, dict) else episodes.iloc[args.episode].to_dict()
-    length = int(ep_meta.get("length", 0))
-    idxs = _find_episode_indices_by_scan(ds, args.episode, length)
 
     rng = jax.random.key(args.seed)
     t_list = []
@@ -198,7 +234,6 @@ def main():
     for k, gi in enumerate(idxs):
         sample = ds[gi]
         raw_data = _build_dual_raw(sample) if args.mode == "dual" else _build_single_raw(sample)
-
         gt_seq_a, gt_seq_b = _collect_gt_sequence(ds, idxs, k, horizon, args.mode)
         input_for_gt = raw_data.copy()
         if args.mode == "dual":
@@ -207,14 +242,12 @@ def main():
         else:
             input_for_gt["actions"] = gt_seq_a
 
-        processed_gt = input_transform(input_for_gt)
-        gt_chunk = _to_numpy(processed_gt["actions"]).astype(np.float32)
+        gt_chunk = _to_numpy(input_transform(input_for_gt)["actions"]).astype(np.float32)
         rng, sub = jax.random.split(rng)
         try:
-            out = policy.infer(raw_data, sub)
+            pred_chunk = _to_numpy(policy.infer(raw_data, sub)["actions"]).astype(np.float32)
         except TypeError:
-            out = policy.infer(raw_data)
-        pred_chunk = _to_numpy(out["actions"]).astype(np.float32)
+            pred_chunk = _to_numpy(policy.infer(raw_data)["actions"]).astype(np.float32)
         if pred_chunk.ndim == 1:
             pred_chunk = pred_chunk[None, :]
         if gt_chunk.ndim == 1:
@@ -239,8 +272,52 @@ def main():
         save_dict[f"gt_step{step_idx}"] = gt_arr
         _plot_single_step(out_dir, t, pred_arr, gt_arr, args.episode, step_idx, args.use_time_axis)
 
-    np.savez(out_dir / f"ep{args.episode:04d}_{args.mode}.npz", **save_dict)
-    print(f"[OK] Saved eval outputs to: {out_dir.resolve()}")
+    npz_path = out_dir / f"ep{args.episode:04d}_{args.mode}.npz"
+    np.savez(npz_path, **save_dict)
+    print(f"[OK] Saved relative eval outputs to: {npz_path}")
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Unified eval entrypoint")
+    ap.add_argument("--mode", choices=["single", "dual", "transform"], default="single")
+    ap.add_argument("--config", required=True)
+    ap.add_argument("--exp-name", required=True)
+    ap.add_argument("--step", type=int, required=True)
+    ap.add_argument("--repo", required=True, help="LeRobot dataset root path")
+    ap.add_argument("--episode", type=int, default=0)
+    ap.add_argument("--out-dir", default="eval_relative_results")
+    ap.add_argument("--dims", type=int, default=20)
+    ap.add_argument("--compare-steps", default="0", help="e.g. 0,1,2 or all")
+    ap.add_argument("--max-plots-per-dim", type=int, default=4)
+    ap.add_argument("--use-time-axis", action="store_true")
+    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--ckpt-base", default="/mnt/public1/chenshuaiwen/checkpoints")
+    ap.add_argument("--mp4-name", default=None, help="transform mode only")
+    args = ap.parse_args()
+
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    train_cfg = _config.get_config(args.config)
+    train_cfg = dataclasses.replace(train_cfg, exp_name=args.exp_name)
+    ckpt_dir = Path(args.ckpt_base) / args.config / args.exp_name / str(args.step)
+    policy = policy_config.create_trained_policy(train_cfg, str(ckpt_dir))
+    input_transform = policy._input_transform
+    if input_transform is None:
+        raise RuntimeError("No input transform found.")
+    horizon = int(getattr(input_transform, "action_horizon", 16))
+    policy._output_transform = IdentityTransform()
+
+    ds = LeRobotDataset(repo_id="local_eval", root=args.repo)
+    fps = _get_fps(ds, default=10.0)
+    episodes = ds.meta["episodes"] if isinstance(ds.meta, dict) else ds.meta.episodes
+    ep_meta = episodes[args.episode] if isinstance(episodes, dict) else episodes.iloc[args.episode].to_dict()
+    length = int(ep_meta.get("length", 0))
+    idxs = _find_episode_indices_by_scan(ds, args.episode, length)
+
+    if args.mode == "transform":
+        _run_transform_export(args, ds, idxs, input_transform, horizon, fps, out_dir)
+    else:
+        _run_relative_eval(args, ds, idxs, policy, input_transform, horizon, fps, out_dir)
 
 
 if __name__ == "__main__":

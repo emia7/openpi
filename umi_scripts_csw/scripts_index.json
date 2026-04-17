@@ -15,7 +15,6 @@
     "compare_npz.py"
   ],
   "evaluation": [
-    "eval_actions.py",
     "eval_relative.py"
   ],
   "runtime_helpers": [

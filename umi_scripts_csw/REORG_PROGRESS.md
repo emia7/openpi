@@ -20,7 +20,7 @@
 - `stage1_convert.py` 也从子进程分发改为进程内调用（views=1/2/3 统一由一个入口执行）。
 - 已移除 `convert_ros{,_vis,_vis_13,_vis_123}.py`，Stage1 只保留 `stage1_convert.py` + `stage1_core.py`。
 - `json_sort.py` 已统一吸收 `json_sort_13.py/json_sort_123.py` 的主要能力，重命名工具收敛为单脚本入口。
-- 相对评估脚本已合并为 `eval_relative.py`（`--mode single|dual`），移除 `eval_dual_relative.py` 和 `eval_relative_visualize.py`。
+- 相对评估脚本已合并为 `eval_relative.py`（`--mode single|dual|transform`），移除 `eval_dual_relative.py` 和 `eval_relative_visualize.py`。
 
 ## 新旧入口映射
 

@@ -84,8 +84,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `eval_actions.py` | 使用 **openpi** 的 `config`、`policy_config` 与 **LeRobotDataset**，在指定 episode 上推理并 **绘制动作** 等（JAX）。 |
-| `eval_relative.py` | **统一相对评估入口**：`--mode single|dual`，支持 horizon 多步对比（`--compare-steps`）并输出图像与 npz。 |
+| `eval_relative.py` | **统一评估入口**：`--mode single|dual|transform`；前两者做相对动作评估，`transform` 导出 transform 后的 mp4+npz。 |
 | `compare_npz.py` | 对比两个 **`.npz`**（如两次导出的 state/actions），曲线与可选热力图。 |
 | `compare_batches.py` | 对比两个目录下的 **episode JSON 批次**：位姿范围、步进差分、时间戳、clamp 是否一致等，用于排查「一批能训一批不能训」。 |
 
