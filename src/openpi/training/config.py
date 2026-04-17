@@ -839,13 +839,19 @@ class LeRobotXVDataConfig(DataConfigFactory):
 class LeRobotXVDualDataConfig(DataConfigFactory):
     """
     Data config for XV dual-hand dataset in LeRobot format.
+    
+    New: UMI-style inter-gripper proprioception with Foundation Pose integration.
+    State encodes: left_world_pos (3) + hands_rel_xyz (3) + hands_rel_rot6d (6) = 12D
 
     Expected dataset keys (per frame):
       - left_view, right_view, third_view: video frames uint8 (H,W,3)
       - left_eef_pos (3), left_eef_rotvec (3), left_gripper (1)
       - right_eef_pos (3), right_eef_rotvec (3), right_gripper (1)
-      - demo_start_pose_left (6), demo_start_pose_right (6)
-      - left_action (7), right_action (7)     # next-state abs
+      - left_pose_cam (7), right_pose_cam (7): Foundation Pose results [x,y,z,qx,qy,qz,qw]
+      - hands_rel_xyz (3), hands_rel_rot6d (6): Inter-gripper relative pose
+      - left_world_pos (3): Left hand position in world frame (first frame left hand as origin)
+      - demo_start_pose_left (6), demo_start_pose_right (6): Legacy fallback
+      - left_action (7), right_action (7): next-state abs
       - task: string
     """
 

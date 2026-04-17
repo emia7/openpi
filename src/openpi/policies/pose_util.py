@@ -144,3 +144,14 @@ def pose7_to_mat(pose7: np.ndarray) -> np.ndarray:
     
     # 调用 pose_util 中的基础函数合成矩阵
     return pos_rot_to_mat(pos, rot)
+
+
+def mat_to_pose7(mat: np.ndarray) -> np.ndarray:
+    """
+    将 4x4 变换矩阵转换为 7维位姿 [x, y, z, qx, qy, qz, qw]。
+    支持 Batch/Sequence 维度。
+    """
+    pos = mat[..., :3, 3]
+    rotmat = mat[..., :3, :3]
+    quat = R.from_matrix(rotmat).as_quat()  # [qx, qy, qz, qw]
+    return np.concatenate([pos, quat], axis=-1)

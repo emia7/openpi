@@ -99,41 +99,47 @@ class XVDualInputs(transforms.DataTransformFn):
         }
 
         # --------------------------
-        # 2) Low-dim obs state (relative to demo start)
+        # 2) Low-dim obs state (UMI-style inter-gripper proprioception)
         # --------------------------
-        l_pos = np.asarray(data["left_eef_pos"], np.float32)
-        l_rot = np.asarray(data["left_eef_rotvec"], np.float32)  # rotvec
-        l_g = np.asarray(data["left_gripper"], np.float32).reshape(1,)
-
-        r_pos = np.asarray(data["right_eef_pos"], np.float32)
-        r_rot = np.asarray(data["right_eef_rotvec"], np.float32)  # rotvec
-        r_g = np.asarray(data["right_gripper"], np.float32).reshape(1,)
-
-        l_cur_mat = pose6_to_mat(np.concatenate([l_pos, l_rot], axis=-1))  # (4,4)
-        r_cur_mat = pose6_to_mat(np.concatenate([r_pos, r_rot], axis=-1))  # (4,4)
-
+        # New design: Use Foundation Pose based inter-gripper state
+        # State includes: left_world_pos + hands_rel_xyz + hands_rel_rot6d = 12D
         
-        l_start = np.asarray(data["demo_start_pose_left"], np.float32)
-        l_start_mat = pose6_to_mat(l_start)
-
-        r_start = np.asarray(data["demo_start_pose_right"], np.float32)
-        r_start_mat = pose6_to_mat(r_start)
-
-
-        l_rel_mat = convert_pose_mat_rep(l_cur_mat, l_start_mat, pose_rep="relative", backward=False)
-        r_rel_mat = convert_pose_mat_rep(r_cur_mat, r_start_mat, pose_rep="relative", backward=False)
-
-        # mat_to_pose10d returns 9D: pos3 + rot6d6
-        l_rel_pose9 = mat_to_pose10d(l_rel_mat)          # (9,)
-        r_rel_pose9 = mat_to_pose10d(r_rel_mat)          # (9,)
-        l_rel_rot6 = l_rel_pose9[3:]                     # (6,)
-        r_rel_rot6 = r_rel_pose9[3:]                     # (6,)
-
-        # final state: (12,)
-        state12 = np.concatenate([l_rel_rot6, r_rel_rot6], axis=-1).astype(np.float32)
-        # inputs["state"] = None  # model_transforms will pad to action_dim if needed
+        # Check if new features are available (Foundation Pose based)
+        if "hands_rel_xyz" in data and "hands_rel_rot6d" in data and "left_world_pos" in data:
+            # Use new inter-gripper state (preferred)
+            hands_rel_xyz = np.asarray(data["hands_rel_xyz"], np.float32)      # (3,)
+            hands_rel_rot6d = np.asarray(data["hands_rel_rot6d"], np.float32)  # (6,)
+            left_world_pos = np.asarray(data["left_world_pos"], np.float32)   # (3,)
+            
+            # State: 12D (left_world_pos + hands_rel_xyz + hands_rel_rot6d)
+            state12 = np.concatenate([left_world_pos, hands_rel_xyz, hands_rel_rot6d], axis=-1).astype(np.float32)
+        else:
+            # Fallback: Use legacy relative-to-demo-start rotation state
+            l_pos = np.asarray(data["left_eef_pos"], np.float32)
+            l_rot = np.asarray(data["left_eef_rotvec"], np.float32)
+            r_pos = np.asarray(data["right_eef_pos"], np.float32)
+            r_rot = np.asarray(data["right_eef_rotvec"], np.float32)
+            
+            l_cur_mat = pose6_to_mat(np.concatenate([l_pos, l_rot], axis=-1))
+            r_cur_mat = pose6_to_mat(np.concatenate([r_pos, r_rot], axis=-1))
+            
+            l_start = np.asarray(data["demo_start_pose_left"], np.float32)
+            l_start_mat = pose6_to_mat(l_start)
+            r_start = np.asarray(data["demo_start_pose_right"], np.float32)
+            r_start_mat = pose6_to_mat(r_start)
+            
+            l_rel_mat = convert_pose_mat_rep(l_cur_mat, l_start_mat, pose_rep="relative", backward=False)
+            r_rel_mat = convert_pose_mat_rep(r_cur_mat, r_start_mat, pose_rep="relative", backward=False)
+            
+            l_rel_pose9 = mat_to_pose10d(l_rel_mat)
+            r_rel_pose9 = mat_to_pose10d(r_rel_mat)
+            l_rel_rot6 = l_rel_pose9[3:]
+            r_rel_rot6 = r_rel_pose9[3:]
+            
+            # Legacy state: only rotations, no position info
+            state12 = np.concatenate([l_rel_rot6, r_rel_rot6], axis=-1).astype(np.float32)
+            
         inputs["state"] = state12  # model_transforms will pad to action_dim if needed
-        # inputs["state"] = None  # model_transforms will pad to action_dim if needed
 
 
                 # --------------------------
