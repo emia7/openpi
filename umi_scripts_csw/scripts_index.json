@@ -16,9 +16,7 @@
   ],
   "evaluation": [
     "eval_actions.py",
-    "eval_relative.py",
-    "eval_dual_relative.py",
-    "eval_relative_visualize.py"
+    "eval_relative.py"
   ],
   "runtime_helpers": [
     "tri_image_sampler_10hz.py",
