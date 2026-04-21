@@ -54,7 +54,7 @@ CAMERA_INTRINSICS = {
 # ArUco marker configuration
 ARUCO_CONFIG = {
     "dictionary": cv2.aruco.DICT_4X4_50,  # 4x4 marker, 50 IDs
-    "marker_size_m": 0.05,  # 5cm marker size
+    "marker_size_m": 0.02,  # 2cm marker size (reduced from 5cm for smaller grippers)
     "left_id": 1,  # ID for left gripper
     "right_id": 2,  # ID for right gripper
 }
