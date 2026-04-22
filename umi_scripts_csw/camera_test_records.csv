@@ -1,0 +1,11 @@
+timestamp,scheme_id,camera,position,test_duration_min,fov_coverage_score,fov_coverage_notes,stability_score,stability_notes,comfort_score,comfort_notes,aruco_detection_rate,aruco_notes,depth_quality_score,depth_quality_notes,overall_score,dealbreaker_issues,recommended_for
+# 使用说明：
+# 1. 每次测试后复制一行，填入实际数据
+# 2. scheme_id 必须是以下之一：DJI-C, DJI-H, ORB-C, ORB-H, ZED-C, ZED-H, WIDE-C, WIDE-H
+# 3. 评分范围：1-5分，5分最佳
+# 4. aruco_detection_rate 填写百分比，如 95 表示 95%
+# 5. 无深度相机跳过 depth_quality_score 和 depth_quality_notes
+# 6. dealbreaker_issues 填写关键问题，如 "视野不够" / "检测率低" / "佩戴不适" 等
+# 7. recommended_for 填写推荐场景，如 "双手活动范围小的场景" / "需要深度的任务" 等
+# 示例行（测试后删除或覆盖）：
+# 2025-04-22, DJI-C, 大疆Nano,胸口,10,3,双手分开40cm时右侧出框,4,画面稳定但偶有抖动,5,几乎无感,85,部分帧检测不到右侧标记,-,-,3,视野不够宽,双手活动范围小的场景

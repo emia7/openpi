@@ -41,14 +41,14 @@ from openpi.policies.pose_util import pose7_to_mat, mat_to_pose7
 # CAMERA CONFIGURATION - MODIFY THIS SECTION
 # =============================================================================
 
-# Option 1: Intel RealSense D435 default intrinsics (1920x1080)
-# Replace with your actual calibrated values!
+# Intel RealSense D435 calibrated intrinsics (1280x720, from ROS topic)
+# Updated 2024-04-22 with actual camera parameters
 CAMERA_INTRINSICS = {
-    "fx": 1386.5,  # focal length x (pixels) - UPDATE THIS
-    "fy": 1385.7,  # focal length y (pixels) - UPDATE THIS
-    "cx": 960.0,   # principal point x (pixels, image center) - UPDATE THIS
-    "cy": 540.0,   # principal point y (pixels, image center) - UPDATE THIS
-    "distortion": [0.0, 0.0, 0.0, 0.0, 0.0],  # [k1, k2, p1, p2, k3] - UPDATE THIS
+    "fx": 919.6441040039062,    # focal length x (from /camera/color/camera_info)
+    "fy": 919.8379516601562,    # focal length y
+    "cx": 648.0823974609375,    # principal point x (image center)
+    "cy": 344.23870849609375,   # principal point y
+    "distortion": [0.0, 0.0, 0.0, 0.0, 0.0],  # plumb_bob, minimal distortion
 }
 
 # ArUco marker configuration
