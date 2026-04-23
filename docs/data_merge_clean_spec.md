@@ -379,6 +379,145 @@ python data_cleaning/check_trajectory_anomalies.py \
 - 分类显示: CRITICAL / WARNING / MINOR / OK
 - 按严重程度排序，方便决策剔除
 
+### generate_visual_report.py
+
+**位置**: `umi_scripts_csw/data_cleaning/generate_visual_report.py`
+
+**功能**: 从JSON报告生成可视化HTML/Markdown报告
+
+**用法**:
+```bash
+python data_cleaning/generate_visual_report.py \
+    --json_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --output_dir ./anomaly_reports \
+    --format both  # html, markdown, or both
+```
+
+**输出**:
+- `trajectory_anomaly_visual.html` - 可视化HTML报告 (推荐)
+- `trajectory_anomaly_visual.md` - Markdown格式报告
+
+### execute_data_cleaning.py
+
+**位置**: `umi_scripts_csw/data_cleaning/execute_data_cleaning.py`
+
+**功能**: 执行实际的数据清理，删除异常episodes并重新编号
+
+**用法** (预览模式，不实际删除):
+```bash
+python data_cleaning/execute_data_cleaning.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --anomaly_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --severity critical \
+    --dry_run
+```
+
+**用法** (正式执行):
+```bash
+python data_cleaning/execute_data_cleaning.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --anomaly_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --severity critical \
+    --output_dir ~/Downloads/handover_umi_0422_cleaned
+```
+
+**参数说明**:
+- `--severity`: 选择要删除的严重程度 (critical/warning/minor/all)
+- `--dry_run`: 预览模式，不实际删除文件
+- `--output_dir`: 清理后数据的输出目录
+
+**输出**:
+- 清理后的数据目录 (重新编号，从1开始连续)
+- `cleaning_log.json` - 清理日志，包含删除列表和编号映射表
+
+---
+
+## 完整数据清理执行指南
+
+### 标准清理流程 (推荐)
+
+```
+原始数据
+    ↓
+Step 1: 轨迹异常检测 (check_trajectory_anomalies.py)
+    ↓
+Step 2: 生成可视化报告 (generate_visual_report.py)
+    ↓ (查看HTML报告，确认要删除的episodes)
+Step 3: 预览清理 (execute_data_cleaning.py --dry_run)
+    ↓ (确认无误)
+Step 4: 正式清理 (execute_data_cleaning.py)
+    ↓
+清理后数据 (cleaned/)
+```
+
+### Step-by-Step 操作步骤
+
+**Step 1: 检测异常**
+```bash
+cd ~/openpi
+
+python umi_scripts_csw/data_cleaning/check_trajectory_anomalies.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --output_dir ./anomaly_reports
+```
+
+**Step 2: 生成可视化报告**
+```bash
+python umi_scripts_csw/data_cleaning/generate_visual_report.py \
+    --json_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --output_dir ./anomaly_reports \
+    --format both
+```
+
+**查看报告**: 用浏览器打开 `anomaly_reports/trajectory_anomaly_visual.html`
+
+**Step 3: 预览清理 (dry-run)**
+```bash
+python umi_scripts_csw/data_cleaning/execute_data_cleaning.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --anomaly_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --severity critical \
+    --dry_run
+```
+
+检查输出，确认要删除的episodes列表正确。
+
+**Step 4: 正式执行清理**
+```bash
+python umi_scripts_csw/data_cleaning/execute_data_cleaning.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --anomaly_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --severity critical \
+    --output_dir ~/Downloads/handover_umi_0422_cleaned
+```
+
+输入 `yes` 确认执行。
+
+**Step 5: 验证清理结果**
+```bash
+# 检查清理后episodes数量
+ls ~/Downloads/handover_umi_0422_cleaned/ | grep "_left.json$" | wc -l
+
+# 查看清理日志
+cat ~/Downloads/handover_umi_0422_cleaned/cleaning_log.json
+```
+
+### 清理策略选择
+
+根据检测结果选择清理级别：
+
+| 场景 | 建议清理级别 | 命令 |
+|------|------------|------|
+| **保守清理** | 只删严重异常 | `--severity critical` |
+| **标准清理** | 删严重+警告 | `--severity warning` |
+| **严格清理** | 删所有非完美 | `--severity minor` |
+| **彻底清理** | 只保留正常 | `--severity all` |
+
+**0422数据处理建议** (根据实际检测结果):
+- 保守方案: 只删除4个严重异常 (206个保留)
+- 标准方案: 删除4+77=81个异常 (129个保留)
+- 严格方案: 删除4+77+56=137个异常 (73个保留)
+
 ---
 
 ## 清理流程
@@ -558,7 +697,7 @@ type选项:
 
 ## 待补充规则 (TODO)
 
-- [x] ~~ArUco检测质量评估标准~~ (已部分实现，见`visualize_aruco_detection.py`)
+
 - [x] ~~轨迹异常检测~~ (已实现 CHECK-007~010)
 - [ ] 轨迹相似度计算方法 (用于去重)
 - [ ] 多批次混合时的norm stats处理

@@ -8,9 +8,10 @@
 
 | 脚本路径 | 核心功能 | 输入 | 输出 | 依赖 |
 |---------|---------|------|------|------|
-| data_detection/add_aruco_pose_to_json.py | ArUco检测 | third.mp4 | third.json (检测位姿) | opencv, numpy |
-| data_detection/visualize_aruco_detection.py | 检测可视化 | third.mp4 + third.json | preview图片 | opencv, imageio |
-| data_cleaning/clean_data_0422_preview.py | 清理预览/报告 | MP4+JSON目录 | cleaning_report.json | numpy, imageio |
+| data_cleaning/check_trajectory_anomalies.py | **轨迹异常检测** (完整分析) | MP4+JSON目录 | trajectory_anomaly_report.json | numpy |
+| data_cleaning/generate_visual_report.py | **可视化报告生成** | anomaly_report.json | HTML/Markdown报告 | 无额外依赖 |
+| data_cleaning/execute_data_cleaning.py | **执行数据清理** (删+重编号) | 数据目录 + anomaly报告 | cleaned/目录 | shutil |
+| data_cleaning/clean_data_0422_preview.py | 清理预览 (旧版，仅供参考) | MP4+JSON目录 | cleaning_report.json | numpy, imageio |
 | data_conversion/convert_mp4_data_to_lerobot_123_aruco.py | **主转换脚本** (ArUco版) | MP4+JSON (stage1) | LeRobot数据集 | lerobot, imageio |
 
 ---
@@ -108,24 +109,36 @@ python data_conversion/convert_mp4_data_to_lerobot_123_aruco.py \
 
 ## 脚本依赖关系图
 
+### 完整数据清理流程 (推荐)
+
+```
+Step 1: 检测异常
+data_cleaning/check_trajectory_anomalies.py
+    ├── 输入: 原始数据目录 (MP4+JSON)
+    └── 输出: trajectory_anomaly_report.json
+
+Step 2: 生成可视化报告  
+data_cleaning/generate_visual_report.py
+    ├── 输入: trajectory_anomaly_report.json
+    └── 输出: trajectory_anomaly_visual.html (查看后决定清理级别)
+
+Step 3: 执行清理
+data_cleaning/execute_data_cleaning.py
+    ├── 输入: 原始数据 + anomaly_report.json
+    ├── 参数: --severity (critical/warning/minor/all)
+    └── 输出: cleaned/ 目录 (重新编号)
+```
+
+### 其他流程
+
 ```
 rosbag_tools/
 ├── convert_rosbag_to_mp4_vis_123.py
 │   └── 输出: stage1格式 (MP4+JSON)
 │
-data_detection/
-├── add_aruco_pose_to_json.py
-│   ├── 输入: stage1 (需third.mp4)
-│   └── 输出: stage1_aruco (含third.json检测信息)
-│
-data_cleaning/
-├── clean_data_0422_preview.py
-│   ├── 输入: stage1或stage1_aruco
-│   └── 输出: cleaning_report.json
-│
 data_conversion/
 ├── convert_mp4_data_to_lerobot_123_aruco.py
-│   ├── 输入: stage1_aruco (必须有ArUco检测数据)
+│   ├── 输入: stage1 (必须有hands_rel数据)
 │   └── 输出: LeRobot格式
 │
 data_evaluation/

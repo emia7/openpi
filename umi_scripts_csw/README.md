@@ -35,13 +35,43 @@ umi_scripts_csw/
 ### data_cleaning/ - 数据清理
 **用途**: 数据质量检查、异常筛选、合并清理
 
-| 脚本 | 功能 |
-|------|------|
-| clean_data_0422_preview.py | 按照清理规范v1.0预览清理效果，生成报告 |
-| check_consistency.py | 检查数据集内部一致性 (视频分辨率、文件完整性) |
-| check_dataset_actions.py | 检查数据集动作统计分布 |
-| compare_batches.py | 对比两个数据批次的差异 |
-| compare_npz.py | 对比NPZ数据文件 |
+| 脚本 | 功能 | 推荐用法 |
+|------|------|---------|
+| **check_trajectory_anomalies.py** | **轨迹异常检测** (完整分析，支持CHECK-004+~010) | Step 1: 检测异常 |
+| **generate_visual_report.py** | **可视化报告生成** (HTML/Markdown) | Step 2: 生成报告 |
+| **execute_data_cleaning.py** | **执行数据清理** (删+重编号) | Step 3: 正式清理 |
+| clean_data_0422_preview.py | 旧版清理预览 (仅供参考) | - |
+| check_consistency.py | 检查数据集内部一致性 (视频分辨率、文件完整性) | - |
+| check_dataset_actions.py | 检查数据集动作统计分布 | - |
+| compare_batches.py | 对比两个数据批次的差异 | - |
+| compare_npz.py | 对比NPZ数据文件 | - |
+
+**快速开始 - 标准清理流程**:
+```bash
+# Step 1: 检测异常
+python data_cleaning/check_trajectory_anomalies.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --output_dir ./anomaly_reports
+
+# Step 2: 生成可视化报告
+python data_cleaning/generate_visual_report.py \
+    --json_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --format both
+
+# Step 3: 预览清理
+python data_cleaning/execute_data_cleaning.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --anomaly_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --severity critical \
+    --dry_run
+
+# Step 4: 正式清理
+python data_cleaning/execute_data_cleaning.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --anomaly_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --severity critical \
+    --output_dir ~/Downloads/handover_umi_0422_cleaned
+```
 
 ---
 
@@ -118,14 +148,30 @@ umi_scripts_csw/
 
 ## 数据处理流程
 
+### 完整流程 (含清理)
+
+```
+原始数据 (MP4+JSON)
+    ↓ [data_cleaning/check_trajectory_anomalies.py]
+异常检测报告 (JSON)
+    ↓ [data_cleaning/generate_visual_report.py]
+可视化报告 (HTML)
+    ↓ (查看报告，确认清理级别)
+执行清理 [data_cleaning/execute_data_cleaning.py]
+    ↓
+清理后数据 (cleaned/)
+    ↓ [data_conversion/]
+LeRobot格式数据集
+```
+
+### 旧流程 (ArUco检测，非必须)
+
 ```
 rosbag (.bag)
     ↓ [rosbag_tools/]
 MP4 + JSON (stage1)
-    ↓ [data_detection/]
-MP4 + JSON (含ArUco检测)
-    ↓ [data_cleaning/]
-清理后的MP4 + JSON
+    ↓ [data_detection/] (可选)
+MP4 + JSON (含检测数据)
     ↓ [data_conversion/]
 LeRobot格式数据集
     ↓ [data_evaluation/]
@@ -134,7 +180,43 @@ LeRobot格式数据集
 
 ## 快速开始
 
-### 1. 新数据处理流程
+### 标准数据清理流程 (推荐，从原始数据到清理后数据)
+
+```bash
+# Step 1: 轨迹异常检测 (CHECK-004+ ~ CHECK-010)
+python data_cleaning/check_trajectory_anomalies.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --output_dir ./anomaly_reports
+
+# Step 2: 生成可视化报告 (查看HTML决定清理级别)
+python data_cleaning/generate_visual_report.py \
+    --json_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --output_dir ./anomaly_reports \
+    --format both
+# 查看: anomaly_reports/trajectory_anomaly_visual.html
+
+# Step 3: 预览清理 (确认要删除的episodes)
+python data_cleaning/execute_data_cleaning.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --anomaly_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --severity critical \
+    --dry_run
+
+# Step 4: 正式执行清理 (删除异常并重新编号)
+python data_cleaning/execute_data_cleaning.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --anomaly_report ./anomaly_reports/trajectory_anomaly_report.json \
+    --severity critical \
+    --output_dir ~/Downloads/handover_umi_0422_cleaned
+
+# Step 5: 验证结果
+ls ~/Downloads/handover_umi_0422_cleaned/ | grep "_left.json$" | wc -l
+# 应显示清理后的episodes数量
+cat ~/Downloads/handover_umi_0422_cleaned/cleaning_log.json
+# 查看清理日志
+```
+
+### 完整数据处理流程 (含ArUco，可选)
 
 ```bash
 # 1. rosbag转MP4 (如果是rosbag源数据)
@@ -143,15 +225,15 @@ python rosbag_tools/convert_rosbag_to_mp4_vis_123.py \
     --out_dir /path/to/stage1 \
     --start_idx 1
 
-# 2. ArUco检测
+# 2. ArUco检测 (如果需要hands_rel数据)
 python data_detection/add_aruco_pose_to_json.py \
     --data_dir /path/to/stage1 \
     --output_dir /path/to/stage1_aruco
 
-# 3. 清理预览 (检查质量)
-python data_cleaning/clean_data_0422_preview.py
+# 3-7. 清理流程 (同上)
+# ...
 
-# 4. 转换为LeRobot
+# 8. 转换为LeRobot
 python data_conversion/convert_mp4_data_to_lerobot_123_aruco.py \
     --stage1_dir /path/to/stage1_aruco \
     --repo my_dataset
