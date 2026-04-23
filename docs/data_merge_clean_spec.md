@@ -284,6 +284,101 @@ if abs(third_frames - avg_frames) > 0.1 * avg_frames:
 - 单帧旋转>45度: 异常
 - 轨迹总长度<0.1米: 可能为静态演示
 
+### 7. 同步问题 (增强版分类)
+
+**规则ID**: CHECK-004+  
+**严重程度**: 分级 (CRITICAL/WARNING/MINOR)
+
+在基础CHECK-004之上，对同步问题按严重程度分类：
+
+| 等级 | 判定标准 | 示例 | 建议处理 |
+|------|---------|------|---------|
+| **CRITICAL** | 单手帧数<5 或 静态轨迹 | episode_000007 (左手2帧) | **必须剔除** |
+| **WARNING** | 帧数差异>10帧 | episode_000002 (7帧差) | 建议剔除 |
+| **MINOR** | 帧数差异3-10帧 | episode_000003 (4帧差) | 可保留记录 |
+
+**静态轨迹判定** (同时属于CHECK-007):
+- 位置方差 < 0.001
+- 轨迹几乎无变化
+- 疑似SLAM追踪丢失
+
+### 8. 静态轨迹检测 (State级)
+
+**规则ID**: CHECK-007  
+**严重程度**: WARNING
+
+**判定**: 位置方差 < 0.001
+**说明**: 某只手的轨迹几乎无变化，疑似SLAM追踪丢失
+**注意**: 与帧数无关，即使帧数充足也可能是静态
+
+**检测代码**:
+```python
+positions = [record["pose"][:3] for record in records]
+pos_variance = np.var(positions, axis=0)
+is_static = np.max(pos_variance) < 0.001
+```
+
+### 9. 少帧异常
+
+**规则ID**: CHECK-008  
+**严重程度**: CRITICAL
+
+**判定**: 单手帧数 < 5
+**说明**: 有效帧数过少，无法构成完整轨迹
+**优先级**: 高于CHECK-002的动态阈值
+
+### 10. 末端跳变
+
+**规则ID**: CHECK-009  
+**严重程度**: WARNING
+
+**判定**: 最后3帧位移 > 0.1m
+**说明**: 轨迹末端有异常跳变，可能录制提前终止或SLAM丢失
+**检测方法**:
+```python
+last_pos = poses[-1]["pose"][:3]
+prev_pos = poses[-4]["pose"][:3]  # 倒数第4帧
+displacement = np.linalg.norm(last_pos - prev_pos)
+has_jump = displacement > 0.1  # 10cm阈值
+```
+
+### 11. Clamp异常
+
+**规则ID**: CHECK-010  
+**严重程度**: MINOR
+
+**判定**: 夹爪变化次数 < 2
+**说明**: handover任务应有2-3次开合(张→合→张)
+**检测方法**:
+```python
+clamps = [record["clamp"] for record in records]
+changes = sum(1 for i in range(1, len(clamps)) 
+              if abs(clamps[i] - clamps[i-1]) > 5)
+is_abnormal = changes < 2
+```
+
+---
+
+## 新增工具脚本
+
+### check_trajectory_anomalies.py
+
+**位置**: `umi_scripts_csw/data_cleaning/check_trajectory_anomalies.py`
+
+**功能**: 检测所有episodes的state轨迹异常 (CHECK-004+ ~ CHECK-010)
+
+**用法**:
+```bash
+python data_cleaning/check_trajectory_anomalies.py \
+    --data_dir ~/Downloads/handover_umi_0422 \
+    --output_dir ./anomaly_reports
+```
+
+**输出**:
+- `trajectory_anomaly_report.json` - 完整异常报告
+- 分类显示: CRITICAL / WARNING / MINOR / OK
+- 按严重程度排序，方便决策剔除
+
 ---
 
 ## 清理流程
@@ -404,6 +499,7 @@ type选项:
 - [ ] 时间同步性检查 (CHECK-004)
 - [ ] 静态帧检测 (CHECK-005)
 - [ ] 动作范围检查 (CHECK-006)
+- [ ] **轨迹异常检测** (CHECK-007~010，使用`check_trajectory_anomalies.py`)
 
 ### 清理后验证
 
@@ -456,16 +552,19 @@ type选项:
 | 版本 | 日期 | 修改内容 | 作者 |
 |------|------|---------|------|
 | 1.0 | 2025-04-22 | 初始版本，定义基础规则和检查项 | csw |
+| 1.1 | 2025-04-23 | 增强同步问题检测(CHECK-004+)，新增State轨迹异常检测(CHECK-007~010)，添加`check_trajectory_anomalies.py`工具 | csw |
 
 ---
 
 ## 待补充规则 (TODO)
 
-- [ ] ArUco检测质量评估标准
-- [ ] 轨迹相似度计算方法
+- [x] ~~ArUco检测质量评估标准~~ (已部分实现，见`visualize_aruco_detection.py`)
+- [x] ~~轨迹异常检测~~ (已实现 CHECK-007~010)
+- [ ] 轨迹相似度计算方法 (用于去重)
 - [ ] 多批次混合时的norm stats处理
 - [ ] 异常episode的人工审核流程
 - [ ] 数据血缘追踪详细规范
+- [ ] 正式清理脚本 (执行实际删除和重新编号)
 
 ---
 
