@@ -1,0 +1,2344 @@
+{
+  "report_version": "1.1",
+  "report_type": "trajectory_anomaly_detection",
+  "data_source": "/Users/chenshuaiwen/Downloads/handover_umi_0422",
+  "summary": {
+    "total_episodes": 210,
+    "avg_frames": 56.36190476190476,
+    "thresholds": {
+      "min_frames": 5,
+      "static_variance": 0.001,
+      "end_jump": 0.1
+    },
+    "statistics": {
+      "critical": 4,
+      "warning": 77,
+      "minor": 56,
+      "ok": 124
+    },
+    "by_type": {
+      "sync_critical": 4,
+      "sync_warning": 9,
+      "sync_minor": 44,
+      "static_trajectory": 6,
+      "end_jump": 62,
+      "clamp_abnormal": 12,
+      "ok": 124
+    }
+  },
+  "classified_reports": {
+    "critical": [
+      {
+        "episode": "episode_000007",
+        "anomaly_type": "sync_critical",
+        "severity": "critical",
+        "description": "严重同步问题: 左手2帧(静态), 右手23帧(静态)",
+        "details": {
+          "left_frames": 2,
+          "right_frames": 23,
+          "left_static": true,
+          "right_static": true
+        }
+      },
+      {
+        "episode": "episode_000134",
+        "anomaly_type": "sync_critical",
+        "severity": "critical",
+        "description": "严重同步问题: 左手10帧(静态), 右手34帧",
+        "details": {
+          "left_frames": 10,
+          "right_frames": 34,
+          "left_static": true,
+          "right_static": false
+        }
+      },
+      {
+        "episode": "episode_000135",
+        "anomaly_type": "sync_critical",
+        "severity": "critical",
+        "description": "严重同步问题: 左手11帧(静态), 右手37帧(静态)",
+        "details": {
+          "left_frames": 11,
+          "right_frames": 37,
+          "left_static": true,
+          "right_static": true
+        }
+      },
+      {
+        "episode": "episode_000136",
+        "anomaly_type": "sync_critical",
+        "severity": "critical",
+        "description": "严重同步问题: 左手11帧(静态), 右手28帧(静态)",
+        "details": {
+          "left_frames": 11,
+          "right_frames": 28,
+          "left_static": true,
+          "right_static": true
+        }
+      }
+    ],
+    "warning": [
+      {
+        "episode": "episode_000007",
+        "anomaly_type": "static_trajectory",
+        "severity": "warning",
+        "description": "right手轨迹静态，方差0.000005",
+        "details": {
+          "hand": "right",
+          "variance": 5.468214449501915e-06,
+          "frames": 23
+        }
+      },
+      {
+        "episode": "episode_000040",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异12帧 (>10)",
+        "details": {
+          "left_frames": 36,
+          "right_frames": 48,
+          "diff": 12
+        }
+      },
+      {
+        "episode": "episode_000065",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.117m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.11662129019607971
+        }
+      },
+      {
+        "episode": "episode_000067",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.138m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.13837089365804453
+        }
+      },
+      {
+        "episode": "episode_000067",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.110m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.10985950682028213
+        }
+      },
+      {
+        "episode": "episode_000072",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.181m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.18079881869115286
+        }
+      },
+      {
+        "episode": "episode_000072",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.132m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.1323808764302899
+        }
+      },
+      {
+        "episode": "episode_000073",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.143m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.1428474254584876
+        }
+      },
+      {
+        "episode": "episode_000073",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.110m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.11018457857707606
+        }
+      },
+      {
+        "episode": "episode_000092",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.107m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.10709482743361025
+        }
+      },
+      {
+        "episode": "episode_000092",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.103m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.10313073699536383
+        }
+      },
+      {
+        "episode": "episode_000096",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.133m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.13259966563218323
+        }
+      },
+      {
+        "episode": "episode_000099",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.107m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.10651825093781764
+        }
+      },
+      {
+        "episode": "episode_000110",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.111m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.1114943760092967
+        }
+      },
+      {
+        "episode": "episode_000115",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.134m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.13351099603023378
+        }
+      },
+      {
+        "episode": "episode_000115",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.156m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.15598696486521363
+        }
+      },
+      {
+        "episode": "episode_000116",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.127m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.12680502118000261
+        }
+      },
+      {
+        "episode": "episode_000116",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.168m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.1684564151728698
+        }
+      },
+      {
+        "episode": "episode_000118",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.147m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.14718694901603763
+        }
+      },
+      {
+        "episode": "episode_000118",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.123m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.12327786619831468
+        }
+      },
+      {
+        "episode": "episode_000119",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.122m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.12228346368923436
+        }
+      },
+      {
+        "episode": "episode_000119",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.164m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.16423198352024512
+        }
+      },
+      {
+        "episode": "episode_000120",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.153m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.15263871258915065
+        }
+      },
+      {
+        "episode": "episode_000121",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.124m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.12375525899728992
+        }
+      },
+      {
+        "episode": "episode_000123",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.106m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.10563787623538005
+        }
+      },
+      {
+        "episode": "episode_000124",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.123m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.12333716386566983
+        }
+      },
+      {
+        "episode": "episode_000125",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.128m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.12802199657759478
+        }
+      },
+      {
+        "episode": "episode_000125",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.153m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.15253056213010674
+        }
+      },
+      {
+        "episode": "episode_000131",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异12帧 (>10)",
+        "details": {
+          "left_frames": 22,
+          "right_frames": 34,
+          "diff": 12
+        }
+      },
+      {
+        "episode": "episode_000132",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异15帧 (>10)",
+        "details": {
+          "left_frames": 26,
+          "right_frames": 41,
+          "diff": 15
+        }
+      },
+      {
+        "episode": "episode_000133",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异13帧 (>10)",
+        "details": {
+          "left_frames": 25,
+          "right_frames": 38,
+          "diff": 13
+        }
+      },
+      {
+        "episode": "episode_000133",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.102m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.10237214281477816
+        }
+      },
+      {
+        "episode": "episode_000133",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.121m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.12127133294102385
+        }
+      },
+      {
+        "episode": "episode_000134",
+        "anomaly_type": "static_trajectory",
+        "severity": "warning",
+        "description": "left手轨迹静态，方差0.000616",
+        "details": {
+          "hand": "left",
+          "variance": 0.0006155337378941894,
+          "frames": 10
+        }
+      },
+      {
+        "episode": "episode_000135",
+        "anomaly_type": "static_trajectory",
+        "severity": "warning",
+        "description": "left手轨迹静态，方差0.000169",
+        "details": {
+          "hand": "left",
+          "variance": 0.00016851257600470162,
+          "frames": 11
+        }
+      },
+      {
+        "episode": "episode_000135",
+        "anomaly_type": "static_trajectory",
+        "severity": "warning",
+        "description": "right手轨迹静态，方差0.000662",
+        "details": {
+          "hand": "right",
+          "variance": 0.0006618239355061253,
+          "frames": 37
+        }
+      },
+      {
+        "episode": "episode_000136",
+        "anomaly_type": "static_trajectory",
+        "severity": "warning",
+        "description": "left手轨迹静态，方差0.000032",
+        "details": {
+          "hand": "left",
+          "variance": 3.199477570458213e-05,
+          "frames": 11
+        }
+      },
+      {
+        "episode": "episode_000136",
+        "anomaly_type": "static_trajectory",
+        "severity": "warning",
+        "description": "right手轨迹静态，方差0.000114",
+        "details": {
+          "hand": "right",
+          "variance": 0.0001135477867751613,
+          "frames": 28
+        }
+      },
+      {
+        "episode": "episode_000137",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异16帧 (>10)",
+        "details": {
+          "left_frames": 22,
+          "right_frames": 38,
+          "diff": 16
+        }
+      },
+      {
+        "episode": "episode_000137",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.152m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.1515723663809185
+        }
+      },
+      {
+        "episode": "episode_000137",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.125m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.12465175791491316
+        }
+      },
+      {
+        "episode": "episode_000138",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异14帧 (>10)",
+        "details": {
+          "left_frames": 21,
+          "right_frames": 35,
+          "diff": 14
+        }
+      },
+      {
+        "episode": "episode_000138",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.249m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.2487720583765751
+        }
+      },
+      {
+        "episode": "episode_000138",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.297m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.2966919534382968
+        }
+      },
+      {
+        "episode": "episode_000140",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异11帧 (>10)",
+        "details": {
+          "left_frames": 40,
+          "right_frames": 51,
+          "diff": 11
+        }
+      },
+      {
+        "episode": "episode_000141",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异17帧 (>10)",
+        "details": {
+          "left_frames": 31,
+          "right_frames": 48,
+          "diff": 17
+        }
+      },
+      {
+        "episode": "episode_000143",
+        "anomaly_type": "sync_warning",
+        "severity": "warning",
+        "description": "中等同步问题: 差异20帧 (>10)",
+        "details": {
+          "left_frames": 89,
+          "right_frames": 109,
+          "diff": 20
+        }
+      },
+      {
+        "episode": "episode_000144",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.118m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.1176206737829943
+        }
+      },
+      {
+        "episode": "episode_000144",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.138m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.13802133789218762
+        }
+      },
+      {
+        "episode": "episode_000145",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.108m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.10766781829092265
+        }
+      },
+      {
+        "episode": "episode_000146",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.104m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.10376690654673333
+        }
+      },
+      {
+        "episode": "episode_000147",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.189m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.18879381277156648
+        }
+      },
+      {
+        "episode": "episode_000147",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.118m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.11839865440781716
+        }
+      },
+      {
+        "episode": "episode_000152",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.103m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.10290084519090688
+        }
+      },
+      {
+        "episode": "episode_000152",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.109m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.10905994451355665
+        }
+      },
+      {
+        "episode": "episode_000164",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.140m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.14030677606571756
+        }
+      },
+      {
+        "episode": "episode_000164",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.150m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.14988233644736904
+        }
+      },
+      {
+        "episode": "episode_000168",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.213m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.21349071930721378
+        }
+      },
+      {
+        "episode": "episode_000170",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.111m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.11092327433819481
+        }
+      },
+      {
+        "episode": "episode_000171",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.110m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.10997051441747235
+        }
+      },
+      {
+        "episode": "episode_000171",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.111m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.1113818196522143
+        }
+      },
+      {
+        "episode": "episode_000176",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.133m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.13336057631595458
+        }
+      },
+      {
+        "episode": "episode_000177",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.103m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.10258242098510292
+        }
+      },
+      {
+        "episode": "episode_000179",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.103m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.10312397098660318
+        }
+      },
+      {
+        "episode": "episode_000192",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.123m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.12321370433936459
+        }
+      },
+      {
+        "episode": "episode_000195",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.147m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.14674512483629168
+        }
+      },
+      {
+        "episode": "episode_000195",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.228m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.22780113936811616
+        }
+      },
+      {
+        "episode": "episode_000196",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.134m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.1337880013415441
+        }
+      },
+      {
+        "episode": "episode_000197",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.152m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.1515786519565387
+        }
+      },
+      {
+        "episode": "episode_000197",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.122m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.12158669414699626
+        }
+      },
+      {
+        "episode": "episode_000198",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.101m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.10100270882452703
+        }
+      },
+      {
+        "episode": "episode_000200",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.129m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.12929969617792697
+        }
+      },
+      {
+        "episode": "episode_000203",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.111m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.11120413063134796
+        }
+      },
+      {
+        "episode": "episode_000204",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.129m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.12914834898739547
+        }
+      },
+      {
+        "episode": "episode_000208",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.129m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.1290433093263545
+        }
+      },
+      {
+        "episode": "episode_000208",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "right手末端跳变0.130m",
+        "details": {
+          "hand": "right",
+          "displacement": 0.12967102963908644
+        }
+      },
+      {
+        "episode": "episode_000210",
+        "anomaly_type": "end_jump",
+        "severity": "warning",
+        "description": "left手末端跳变0.104m",
+        "details": {
+          "hand": "left",
+          "displacement": 0.1040778519818366
+        }
+      }
+    ],
+    "minor": [
+      {
+        "episode": "episode_000002",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异7帧 (3~10)",
+        "details": {
+          "left_frames": 43,
+          "right_frames": 50,
+          "diff": 7
+        }
+      },
+      {
+        "episode": "episode_000003",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 59,
+          "right_frames": 63,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000007",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "left手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "left",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000007",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "right手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "right",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000009",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异10帧 (3~10)",
+        "details": {
+          "left_frames": 43,
+          "right_frames": 53,
+          "diff": 10
+        }
+      },
+      {
+        "episode": "episode_000011",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 54,
+          "right_frames": 58,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000012",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异9帧 (3~10)",
+        "details": {
+          "left_frames": 47,
+          "right_frames": 56,
+          "diff": 9
+        }
+      },
+      {
+        "episode": "episode_000030",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 64,
+          "right_frames": 68,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000041",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 53,
+          "right_frames": 57,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000042",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 64,
+          "right_frames": 68,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000043",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异10帧 (3~10)",
+        "details": {
+          "left_frames": 38,
+          "right_frames": 48,
+          "diff": 10
+        }
+      },
+      {
+        "episode": "episode_000068",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 51,
+          "right_frames": 55,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000071",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 46,
+          "right_frames": 50,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000072",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 46,
+          "right_frames": 50,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000074",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 51,
+          "right_frames": 55,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000082",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异8帧 (3~10)",
+        "details": {
+          "left_frames": 47,
+          "right_frames": 55,
+          "diff": 8
+        }
+      },
+      {
+        "episode": "episode_000083",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 48,
+          "right_frames": 52,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000098",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异10帧 (3~10)",
+        "details": {
+          "left_frames": 38,
+          "right_frames": 48,
+          "diff": 10
+        }
+      },
+      {
+        "episode": "episode_000099",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异5帧 (3~10)",
+        "details": {
+          "left_frames": 43,
+          "right_frames": 48,
+          "diff": 5
+        }
+      },
+      {
+        "episode": "episode_000100",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异5帧 (3~10)",
+        "details": {
+          "left_frames": 37,
+          "right_frames": 42,
+          "diff": 5
+        }
+      },
+      {
+        "episode": "episode_000102",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异5帧 (3~10)",
+        "details": {
+          "left_frames": 45,
+          "right_frames": 50,
+          "diff": 5
+        }
+      },
+      {
+        "episode": "episode_000105",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 52,
+          "right_frames": 56,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000109",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异5帧 (3~10)",
+        "details": {
+          "left_frames": 43,
+          "right_frames": 48,
+          "diff": 5
+        }
+      },
+      {
+        "episode": "episode_000117",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异6帧 (3~10)",
+        "details": {
+          "left_frames": 63,
+          "right_frames": 69,
+          "diff": 6
+        }
+      },
+      {
+        "episode": "episode_000121",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异6帧 (3~10)",
+        "details": {
+          "left_frames": 38,
+          "right_frames": 44,
+          "diff": 6
+        }
+      },
+      {
+        "episode": "episode_000122",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 42,
+          "right_frames": 46,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000123",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 41,
+          "right_frames": 45,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000124",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异5帧 (3~10)",
+        "details": {
+          "left_frames": 37,
+          "right_frames": 42,
+          "diff": 5
+        }
+      },
+      {
+        "episode": "episode_000125",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 43,
+          "right_frames": 47,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000125",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "right手夹爪变化异常，仅1次",
+        "details": {
+          "hand": "right",
+          "changes": 1
+        }
+      },
+      {
+        "episode": "episode_000126",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异5帧 (3~10)",
+        "details": {
+          "left_frames": 40,
+          "right_frames": 45,
+          "diff": 5
+        }
+      },
+      {
+        "episode": "episode_000127",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异9帧 (3~10)",
+        "details": {
+          "left_frames": 32,
+          "right_frames": 41,
+          "diff": 9
+        }
+      },
+      {
+        "episode": "episode_000128",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异10帧 (3~10)",
+        "details": {
+          "left_frames": 24,
+          "right_frames": 34,
+          "diff": 10
+        }
+      },
+      {
+        "episode": "episode_000129",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异9帧 (3~10)",
+        "details": {
+          "left_frames": 18,
+          "right_frames": 27,
+          "diff": 9
+        }
+      },
+      {
+        "episode": "episode_000129",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "right手夹爪变化异常，仅1次",
+        "details": {
+          "hand": "right",
+          "changes": 1
+        }
+      },
+      {
+        "episode": "episode_000130",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异6帧 (3~10)",
+        "details": {
+          "left_frames": 36,
+          "right_frames": 42,
+          "diff": 6
+        }
+      },
+      {
+        "episode": "episode_000133",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "right手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "right",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000134",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "left手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "left",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000134",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "right手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "right",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000135",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "left手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "left",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000135",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "right手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "right",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000136",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "left手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "left",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000136",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "right手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "right",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000137",
+        "anomaly_type": "clamp_abnormal",
+        "severity": "minor",
+        "description": "right手夹爪变化异常，仅0次",
+        "details": {
+          "hand": "right",
+          "changes": 0
+        }
+      },
+      {
+        "episode": "episode_000139",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异9帧 (3~10)",
+        "details": {
+          "left_frames": 32,
+          "right_frames": 41,
+          "diff": 9
+        }
+      },
+      {
+        "episode": "episode_000142",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异8帧 (3~10)",
+        "details": {
+          "left_frames": 97,
+          "right_frames": 105,
+          "diff": 8
+        }
+      },
+      {
+        "episode": "episode_000144",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 61,
+          "right_frames": 65,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000145",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异6帧 (3~10)",
+        "details": {
+          "left_frames": 38,
+          "right_frames": 44,
+          "diff": 6
+        }
+      },
+      {
+        "episode": "episode_000147",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 76,
+          "right_frames": 80,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000151",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异4帧 (3~10)",
+        "details": {
+          "left_frames": 66,
+          "right_frames": 70,
+          "diff": 4
+        }
+      },
+      {
+        "episode": "episode_000152",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异7帧 (3~10)",
+        "details": {
+          "left_frames": 43,
+          "right_frames": 50,
+          "diff": 7
+        }
+      },
+      {
+        "episode": "episode_000158",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异5帧 (3~10)",
+        "details": {
+          "left_frames": 62,
+          "right_frames": 67,
+          "diff": 5
+        }
+      },
+      {
+        "episode": "episode_000167",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异5帧 (3~10)",
+        "details": {
+          "left_frames": 58,
+          "right_frames": 63,
+          "diff": 5
+        }
+      },
+      {
+        "episode": "episode_000175",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异10帧 (3~10)",
+        "details": {
+          "left_frames": 38,
+          "right_frames": 48,
+          "diff": 10
+        }
+      },
+      {
+        "episode": "episode_000182",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异8帧 (3~10)",
+        "details": {
+          "left_frames": 52,
+          "right_frames": 60,
+          "diff": 8
+        }
+      },
+      {
+        "episode": "episode_000183",
+        "anomaly_type": "sync_minor",
+        "severity": "minor",
+        "description": "轻微同步问题: 差异6帧 (3~10)",
+        "details": {
+          "left_frames": 43,
+          "right_frames": 49,
+          "diff": 6
+        }
+      }
+    ],
+    "ok": [
+      {
+        "episode": "episode_000001",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000004",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000005",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000006",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000008",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000010",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000013",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000014",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000015",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000016",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000017",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000018",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000019",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000020",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000021",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000022",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000023",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000024",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000025",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000026",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000027",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000028",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000029",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000031",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000032",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000033",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000034",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000035",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000036",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000037",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000038",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000039",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000044",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000045",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000046",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000047",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000048",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000049",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000050",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000051",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000052",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000053",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000054",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000055",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000056",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000057",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000058",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000059",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000060",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000061",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000062",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000063",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000064",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000066",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000069",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000070",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000075",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000076",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000077",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000078",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000079",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000080",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000081",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000084",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000085",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000086",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000087",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000088",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000089",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000090",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000091",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000093",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000094",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000095",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000097",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000101",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000103",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000104",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000106",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000107",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000108",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000111",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000112",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000113",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000114",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000148",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000149",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000150",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000153",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000154",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000155",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000156",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000157",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000159",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000160",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000161",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000162",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000163",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000165",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000166",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000169",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000172",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000173",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000174",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000178",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000180",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000181",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000184",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000185",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000186",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000187",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000188",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000189",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000190",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000191",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000193",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000194",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000199",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000201",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000202",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000205",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000206",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000207",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      },
+      {
+        "episode": "episode_000209",
+        "anomaly_type": "ok",
+        "severity": "ok",
+        "description": "无异常",
+        "details": {}
+      }
+    ]
+  }
+}

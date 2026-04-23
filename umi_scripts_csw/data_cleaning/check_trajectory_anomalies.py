@@ -59,12 +59,24 @@ class AnomalyReport:
     details: Dict
     
     def to_dict(self):
+        # 转换details中的numpy类型为Python原生类型
+        clean_details = {}
+        for k, v in self.details.items():
+            if isinstance(v, np.bool_):
+                clean_details[k] = bool(v)
+            elif isinstance(v, (np.integer, np.int64)):
+                clean_details[k] = int(v)
+            elif isinstance(v, (np.floating, np.float64)):
+                clean_details[k] = float(v)
+            else:
+                clean_details[k] = v
+        
         return {
             "episode": self.episode,
             "anomaly_type": self.anomaly_type.value,
             "severity": self.severity.value,
             "description": self.description,
-            "details": self.details
+            "details": clean_details
         }
 
 

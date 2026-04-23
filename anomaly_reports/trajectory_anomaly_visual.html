@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据质量检测报告 - handover_umi_0422</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header .subtitle {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .card.critical {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        .card.warning {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        .card.minor {
+            border-left-color: #17a2b8;
+            background: #f0f9ff;
+        }
+        .card.ok {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        .card h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .card .number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .card .percentage {
+            font-size: 14px;
+            color: #666;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .anomaly-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .anomaly-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .anomaly-table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .anomaly-table tr:hover {
+            background: #f8f9fa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-critical {
+            background: #dc3545;
+            color: white;
+        }
+        .badge-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .badge-minor {
+            background: #17a2b8;
+            color: white;
+        }
+        .badge-ok {
+            background: #28a745;
+            color: white;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+            display: flex;
+        }
+        .progress-segment {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .progress-critical {
+            background: #dc3545;
+            width: 1.9%;
+        }
+        .progress-warning {
+            background: #ffc107;
+            color: #333;
+            width: 36.7%;
+        }
+        .progress-minor {
+            background: #17a2b8;
+            width: 26.7%;
+        }
+        .progress-ok {
+            background: #28a745;
+            width: 59.0%;
+        }
+        .type-distribution {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .type-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            align-items: center;
+        }
+        .type-name {
+            font-weight: 500;
+        }
+        .type-count {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+        .recommendation {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .recommendation h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        .recommendation ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>数据质量检测报告</h1>
+            <div class="subtitle">/Users/chenshuaiwen/Downloads/handover_umi_0422 | 生成时间: 2026-04-23 12:04:06</div>
+        </div>
+        
+        <div class="content">
+            <!-- 统计卡片 -->
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>总Episodes</h3>
+                    <div class="number">210</div>
+                    <div class="percentage">平均帧数: 56.4</div>
+                </div>
+                <div class="card ok">
+                    <h3>正常</h3>
+                    <div class="number">124</div>
+                    <div class="percentage">59.0%</div>
+                </div>
+                <div class="card critical">
+                    <h3>严重异常 (建议剔除)</h3>
+                    <div class="number">4</div>
+                    <div class="percentage">1.9%</div>
+                </div>
+                <div class="card warning">
+                    <h3>警告 (可选剔除)</h3>
+                    <div class="number">77</div>
+                    <div class="percentage">36.7%</div>
+                </div>
+                <div class="card minor">
+                    <h3>轻微异常 (可保留)</h3>
+                    <div class="number">56</div>
+                    <div class="percentage">26.7%</div>
+                </div>
+            </div>
+            
+            <!-- 分布进度条 -->
+            <div class="section">
+                <h2>质量分布概览</h2>
+                <div class="progress-bar">
+                    <div class="progress-segment progress-critical" style="width: 1.9%" title="严重: 4"></div>
+                    <div class="progress-segment progress-warning" style="width: 36.7%" title="警告: 77">77</div>
+                    <div class="progress-segment progress-minor" style="width: 26.7%" title="轻微: 56">56</div>
+                    <div class="progress-segment progress-ok" style="width: 59.0%" title="正常: 124">124</div>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 20px; margin-top: 10px; font-size: 12px;">
+                    <span><span style="color: #dc3545;">■</span> 严重 1.9%</span>
+                    <span><span style="color: #ffc107;">■</span> 警告 36.7%</span>
+                    <span><span style="color: #17a2b8;">■</span> 轻微 26.7%</span>
+                    <span><span style="color: #28a745;">■</span> 正常 59.0%</span>
+                </div>
+            </div>
+            
+            <!-- 异常类型分布 -->
+            <div class="section">
+                <h2>异常类型分布</h2>
+                <div class="type-distribution">
+
+                    <div class="type-item">
+                        <span class="type-name">正常</span>
+                        <span class="type-count">124</span>
+                    </div>
+
+                    <div class="type-item">
+                        <span class="type-name">末端跳变</span>
+                        <span class="type-count">62</span>
+                    </div>
+
+                    <div class="type-item">
+                        <span class="type-name">轻微同步问题</span>
+                        <span class="type-count">44</span>
+                    </div>
+
+                    <div class="type-item">
+                        <span class="type-name">夹爪异常</span>
+                        <span class="type-count">12</span>
+                    </div>
+
+                    <div class="type-item">
+                        <span class="type-name">中等同步问题</span>
+                        <span class="type-count">9</span>
+                    </div>
+
+                    <div class="type-item">
+                        <span class="type-name">静态轨迹</span>
+                        <span class="type-count">6</span>
+                    </div>
+
+                    <div class="type-item">
+                        <span class="type-name">严重同步问题</span>
+                        <span class="type-count">4</span>
+                    </div>
+
+                </div>
+            </div>
+            
+            <!-- 处理建议 -->
+            <div class="recommendation">
+                <h3>处理建议</h3>
+                <ul>
+<li><strong>严重异常 (4个)</strong>: 建议立即剔除，这些episodes存在严重同步问题或静态轨迹，无法用于训练</li><li><strong>警告异常 (77个)</strong>: 建议剔除，主要为末端跳变问题，可能影响动作学习质量</li><li><strong>轻微异常 (56个)</strong>: 可保留观察，轻微同步问题对训练影响较小</li>
+                    <li><strong>正常数据 (124个)</strong>: 质量良好，可直接用于训练</li>
+                </ul>
+            </div>
+            
+            <!-- 严重异常列表 -->
+            <div class="section">
+                <h2>严重异常详情 (建议剔除)</h2>
+                <table class="anomaly-table">
+                    <thead>
+                        <tr>
+                            <th>Episode</th>
+                            <th>异常类型</th>
+                            <th>严重程度</th>
+                            <th>描述</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td>episode_000007</td>
+                            <td>严重同步问题</td>
+                            <td><span class="badge badge-critical">严重</span></td>
+                            <td>严重同步问题: 左手2帧(静态), 右手23帧(静态)</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000134</td>
+                            <td>严重同步问题</td>
+                            <td><span class="badge badge-critical">严重</span></td>
+                            <td>严重同步问题: 左手10帧(静态), 右手34帧</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000135</td>
+                            <td>严重同步问题</td>
+                            <td><span class="badge badge-critical">严重</span></td>
+                            <td>严重同步问题: 左手11帧(静态), 右手37帧(静态)</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000136</td>
+                            <td>严重同步问题</td>
+                            <td><span class="badge badge-critical">严重</span></td>
+                            <td>严重同步问题: 左手11帧(静态), 右手28帧(静态)</td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 警告异常列表 -->
+            <div class="section">
+                <h2>警告异常详情 (可选剔除)</h2>
+                <table class="anomaly-table">
+                    <thead>
+                        <tr>
+                            <th>Episode</th>
+                            <th>异常类型</th>
+                            <th>严重程度</th>
+                            <th>描述</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td>episode_000007</td>
+                            <td>静态轨迹</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手轨迹静态，方差0.000005</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000040</td>
+                            <td>中等同步问题</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>中等同步问题: 差异12帧 (>10)</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000065</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.117m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000067</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.138m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000067</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.110m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000072</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.181m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000072</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.132m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000073</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.143m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000073</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.110m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000092</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.107m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000092</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.103m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000096</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.133m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000099</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.107m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000110</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.111m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000115</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.134m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000115</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.156m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000116</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.127m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000116</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.168m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000118</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.147m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000118</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.123m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000119</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.122m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000119</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.164m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000120</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.153m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000121</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.124m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000123</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.106m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000124</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.123m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000125</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>left手末端跳变0.128m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000125</td>
+                            <td>末端跳变</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>right手末端跳变0.153m</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000131</td>
+                            <td>中等同步问题</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>中等同步问题: 差异12帧 (>10)</td>
+                        </tr>
+
+                        <tr>
+                            <td>episode_000132</td>
+                            <td>中等同步问题</td>
+                            <td><span class="badge badge-warning">警告</span></td>
+                            <td>中等同步问题: 差异15帧 (>10)</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #666;">
+                                ... 还有 47 个警告异常，完整列表见JSON报告
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="footer">
+            报告生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | 
+            检测工具: check_trajectory_anomalies.py | 
+            规范版本: v1.1
+        </div>
+    </div>
+</body>
+</html>
