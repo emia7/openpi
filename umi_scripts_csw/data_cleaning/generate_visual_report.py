@@ -406,12 +406,9 @@ def generate_html_report(report: Dict, output_path: Path):
                     <tbody>
 """
     
-    for r in classified["warning"][:30]:  # 只显示前30个
+    # 显示所有警告异常
+    for r in classified["warning"]:
         badge_class = "badge-warning"
-        if r['anomaly_type'] == 'static_trajectory':
-            badge_class = "badge-warning"
-        elif r['anomaly_type'] == 'end_jump':
-            badge_class = "badge-warning"
         
         html += f"""
                         <tr>
@@ -419,15 +416,6 @@ def generate_html_report(report: Dict, output_path: Path):
                             <td>{type_names.get(r['anomaly_type'], r['anomaly_type'])}</td>
                             <td><span class="badge {badge_class}">警告</span></td>
                             <td>{r['description']}</td>
-                        </tr>
-"""
-    
-    if len(classified["warning"]) > 30:
-        html += f"""
-                        <tr>
-                            <td colspan="4" style="text-align: center; color: #666;">
-                                ... 还有 {len(classified['warning']) - 30} 个警告异常，完整列表见JSON报告
-                            </td>
                         </tr>
 """
     
@@ -553,18 +541,16 @@ def generate_markdown_report(report: Dict, output_path: Path):
 
 ---
 
-## 警告异常列表 (前30个)
+## 警告异常列表 (全部)
 
 | Episode | 异常类型 | 严重程度 | 描述 |
 |---------|---------|---------|------|
 """
     
-    for r in classified["warning"][:30]:
+    # 显示所有警告异常
+    for r in classified["warning"]:
         type_name = type_names.get(r['anomaly_type'], r['anomaly_type'])
         md += f"| {r['episode']} | {type_name} | 警告 | {r['description']} |\n"
-    
-    if len(classified["warning"]) > 30:
-        md += f"| ... | ... | ... | *还有 {len(classified['warning']) - 30} 个，完整列表见JSON报告* |\n"
     
     md += """
 
