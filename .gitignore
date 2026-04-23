@@ -171,3 +171,8 @@ cython_debug/
 
 # Handover UMI data directory (large video files)
 handover_umi/
+
+# Data cleaning anomaly reports (generated reports, not source code)
+anomaly_reports*/
+preview_*/
+cleaning_log*.json
