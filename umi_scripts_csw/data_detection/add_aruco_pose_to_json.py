@@ -32,8 +32,8 @@ from pathlib import Path
 import numpy as np
 import cv2
 
-# Add src to path for pose utilities
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Add src to path for pose utilities (script is in umi_scripts_csw/data_detection/)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from openpi.policies.pose_util import pose7_to_mat, mat_to_pose7
 
 
