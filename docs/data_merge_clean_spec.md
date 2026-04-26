@@ -234,75 +234,61 @@ def check_file_completeness(episode_dir, episode_name):
 ### 4. 时间同步性检查 (帧数相关)
 
 **规则ID**: CHECK-004  
-**严重程度**: 警告性
+**严重程度**: 分级 (CRITICAL/WARNING/MINOR)
 
 **检测指标** (基于帧数的相对差异):
 
-| 检查项 | 判定标准 | 说明 |
-|--------|---------|------|
-| 左右手帧数差 | `abs(left_frames - right_frames) < 0.05 * avg_frames` | 差异<平均帧数的5% |
-| 第三视角帧数差 | `abs(third_frames - avg(left,right)) < 0.1 * avg_frames` | 差异<平均帧数的10% |
-| 时间戳对齐误差 | 最大误差< 100ms 或 1帧时长 | 取较小值 |
+| 检查项 | 判定标准 | 严重程度 | 说明 |
+|--------|---------|----------|------|
+| 单手少帧 | 帧数 < 5 | **CRITICAL** | 无法构成有效轨迹 |
+| 单手静态 | 帧数≥5 但位置方差<0.001 | **CRITICAL** | SLAM追踪丢失 |
+| 帧数差异大 | 差异 > 10帧 | **WARNING** | 左右手严重不同步 |
+| 帧数差异中 | 差异 3-10帧 | **MINOR** | 轻微不同步 |
+| 第三视角差异 | > 平均帧数×10% | **WARNING** | 第三视角不同步 |
 
 **计算方式**:
 ```python
 left_frames = count_frames(episode_left_mp4)
 right_frames = count_frames(episode_right_mp4)
-third_frames = count_frames(episode_third_mp4)
 avg_frames = (left_frames + right_frames) / 2
 
-# 检查左右手同步
-if abs(left_frames - right_frames) > 0.05 * avg_frames:
-    mark_warning("左右手帧数差异过大")
+# 检查帧数差异
+frame_diff = abs(left_frames - right_frames)
 
-# 检查第三视角同步
-if abs(third_frames - avg_frames) > 0.1 * avg_frames:
-    mark_warning("第三视角帧数差异过大")
+if min(left_frames, right_frames) < 5:
+    severity = "CRITICAL"  # 单手过少
+elif frame_diff > 10:
+    severity = "WARNING"   # 差异过大
+elif frame_diff > 3:
+    severity = "MINOR"     # 轻微差异
 ```
 
-**示例** (平均60帧):
-- 左右手差异应 < 3帧 (60*0.05)
-- 第三视角差异应 < 6帧 (60*0.1)
-
-### 5. 静态帧检测
+### 5. 静态帧检测 (像素级)
 
 **规则ID**: CHECK-005  
 **严重程度**: 警告性
 
 **检测方法**:
-- 计算相邻帧光流或像素差异
-- 连续5帧以上无变化视为静态
-- 静态占比>30%标记为低质量
+- 计算相邻帧像素差异 (MSE或光流)
+- 连续5帧以上无变化 (MSE < 阈值) 视为静态
+- 静态占比 > 30% 标记为低质量
+
+**阈值**: MSE < 100 (RGB空间)
 
 ### 6. 动作范围异常
 
 **规则ID**: CHECK-006  
-**严重程度**: 警告性
+**严重程度**: WARNING
 
 **检测指标**:
-- 单步位移>0.5米: 异常
-- 单帧旋转>45度: 异常
-- 轨迹总长度<0.1米: 可能为静态演示
+| 异常类型 | 判定标准 | 说明 |
+|----------|---------|------|
+| 单步位移过大 | > 0.5m/帧 | 跳变或噪声 |
+| 单帧旋转过大 | > 45°/帧 | 旋转跳变 |
+| 轨迹总长过短 | < 0.1m | 可能是静态演示 |
+| 速度异常 | 瞬时速度 > 2m/s | 超出合理范围 |
 
-### 7. 同步问题 (增强版分类)
-
-**规则ID**: CHECK-004+  
-**严重程度**: 分级 (CRITICAL/WARNING/MINOR)
-
-在基础CHECK-004之上，对同步问题按严重程度分类：
-
-| 等级 | 判定标准 | 示例 | 建议处理 |
-|------|---------|------|---------|
-| **CRITICAL** | 单手帧数<5 或 静态轨迹 | episode_000007 (左手2帧) | **必须剔除** |
-| **WARNING** | 帧数差异>10帧 | episode_000002 (7帧差) | 建议剔除 |
-| **MINOR** | 帧数差异3-10帧 | episode_000003 (4帧差) | 可保留记录 |
-
-**静态轨迹判定** (同时属于CHECK-007):
-- 位置方差 < 0.001
-- 轨迹几乎无变化
-- 疑似SLAM追踪丢失
-
-### 8. 静态轨迹检测 (State级)
+### 7. 静态轨迹检测 (State级)
 
 **规则ID**: CHECK-007  
 **严重程度**: WARNING
@@ -318,7 +304,7 @@ pos_variance = np.var(positions, axis=0)
 is_static = np.max(pos_variance) < 0.001
 ```
 
-### 9. 少帧异常
+### 8. 少帧异常
 
 **规则ID**: CHECK-008  
 **严重程度**: CRITICAL
@@ -327,7 +313,7 @@ is_static = np.max(pos_variance) < 0.001
 **说明**: 有效帧数过少，无法构成完整轨迹
 **优先级**: 高于CHECK-002的动态阈值
 
-### 10. 末端跳变
+### 9. 末端跳变
 
 **规则ID**: CHECK-009  
 **严重程度**: WARNING
@@ -342,7 +328,7 @@ displacement = np.linalg.norm(last_pos - prev_pos)
 has_jump = displacement > 0.1  # 10cm阈值
 ```
 
-### 11. Clamp异常
+### 10. Clamp异常
 
 **规则ID**: CHECK-010  
 **严重程度**: MINOR
@@ -691,7 +677,8 @@ type选项:
 | 版本 | 日期 | 修改内容 | 作者 |
 |------|------|---------|------|
 | 1.0 | 2025-04-22 | 初始版本，定义基础规则和检查项 | csw |
-| 1.1 | 2025-04-23 | 增强同步问题检测(CHECK-004+)，新增State轨迹异常检测(CHECK-007~010)，添加`check_trajectory_anomalies.py`工具 | csw |
+| 1.1 | 2025-04-23 | 增强同步问题检测，新增State轨迹异常检测，添加`check_trajectory_anomalies.py`工具 | csw |
+| 1.2 | 2025-04-26 | 完善十条检测规则(CHECK-001~010)，统一格式和严重程度定义，增加实际案例 | csw |
 
 ---
 
