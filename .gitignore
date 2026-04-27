@@ -129,8 +129,10 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Environments（含子目录如 umi_scripts_csw/.env，勿把 OPENAI_API_KEY 等提交进 git）
 .env
+**/.env
+umi_scripts_csw/.env
 .venv
 env/
 venv/
@@ -177,5 +179,5 @@ anomaly_reports*/
 preview_*/
 cleaning_log*.json
 
-# Squeak / audio debug (generated WAV, PNG, JSON)
+# 旧 squeak 调试图（若本地仍有该目录可忽略；当前云 API 脚本不生成此目录）
 umi_scripts_csw/squeak_debug/

@@ -8,9 +8,9 @@
    python umi_scripts_csw/play_video_check_audio.py <video> --extract-only
 2)（macOS）抽轨后用扬声器试听中间 WAV
    python umi_scripts_csw/play_video_check_audio.py <video> --afplay
-3) 做尖叫/短促声事件检测
-   python umi_scripts_csw/squeak_detector.py <video>
-   或本脚本一键跑：python umi_scripts_csw/play_video_check_audio.py <video> --squeak
+3) 尖叫/短促声：用云模型听整段音
+   python umi_scripts_csw/squeak_audio_gpt4o.py <video>
+   或本脚本 --squeak（同上，需 .env 中 OPENAI_API_KEY + OPENAI_BASE_URL）
 
 仅播放画面（不播放系统音频）时：
   python umi_scripts_csw/play_video_check_audio.py <video>
@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -31,10 +32,9 @@ _UMI = Path(__file__).resolve().parent
 if str(_UMI) not in sys.path:
     sys.path.insert(0, str(_UMI))
 
-from squeak_detector import (  # type: ignore
-    _find_ffmpeg,
-    detect_squeak_from_video,
+from audio_extract import (
     extract_audio_wav,
+    find_ffmpeg,
     load_wav_f32,
     print_pcm_stats,
     probe_audio_with_ffmpeg,
@@ -105,7 +105,7 @@ def play_video_with_audio_vis(video_path: str) -> None:
 def run_extract_and_stats(video: Path) -> Path:
     print("=" * 60, flush=True)
     print("用 ffmpeg 抽音（imageio-ffmpeg 自带或 PATH 的 ffmpeg）")
-    print("ffmpeg =", _find_ffmpeg(), flush=True)
+    print("ffmpeg =", find_ffmpeg(), flush=True)
     print("=" * 60, flush=True)
     d = Path(tempfile.mkdtemp(prefix="audio_check_"))
     wav = d / "extracted.wav"
@@ -133,21 +133,7 @@ def main() -> None:
     parser.add_argument(
         "--squeak",
         action="store_true",
-        help="不弹窗，直接跑与 squeak_detector 相同的尖叫/短促声检测，打印峰时刻与包络图路径",
-    )
-    parser.add_argument(
-        "--squeak-sensitivity", type=float, default=1.0, help="[--squeak] 同 squeak --sensitivity"
-    )
-    parser.add_argument(
-        "--no-squeak-postfilter",
-        action="store_true",
-        help="[--squeak] 同 --no-postfilter，只做包络直检",
-    )
-    parser.add_argument(
-        "--squeak-out-dir",
-        type=Path,
-        default=None,
-        help="[--squeak] 输出目录，默认同 squeak 的 squeak_debug",
+        help="不弹窗，调用 squeak_audio_gpt4o.py（VectorEngine/OpenAI 兼容，需 umi_scripts_csw/.env）",
     )
     args = parser.parse_args()
     video = args.video.expanduser()
@@ -155,27 +141,11 @@ def main() -> None:
         raise SystemExit(f"文件不存在: {video}")
 
     if args.squeak:
-        out = args.squeak_out_dir.expanduser() if args.squeak_out_dir else None
-        summary, png, wavp = detect_squeak_from_video(
-            video,
-            out_dir=out,
-            sensitivity=args.squeak_sensitivity,
-            use_postfilter=not args.no_squeak_postfilter,
-            keep_wav=False,
-        )
-        print(f"\n[--squeak] n_events={summary.get('n_events', 0)}  ok={summary.get('ok', False)}", flush=True)
-        for i, e in enumerate(summary.get("events") or [], 1):
-            print(
-                f"  #{i:02d} peak={e.get('t_peak', 0):.3f}s  "
-                f"start={e.get('t_start', 0):.3f}s  end={e.get('t_end', 0):.3f}s  "
-                f"score={e.get('score', 0):.4f}",
-                flush=True,
-            )
-        if png:
-            print(f"包络图: {png}", flush=True)
-        if wavp:
-            print(f"WAV(保留): {wavp}", flush=True)
-        return
+        gpt4o = _UMI / "squeak_audio_gpt4o.py"
+        if not gpt4o.is_file():
+            raise SystemExit(f"未找到: {gpt4o}")
+        r = subprocess.run([sys.executable, str(gpt4o), str(video)], check=False)
+        raise SystemExit(r.returncode)
 
     if args.extract_only or args.afplay:
         wav = run_extract_and_stats(video)
