@@ -176,3 +176,6 @@ handover_umi/
 anomaly_reports*/
 preview_*/
 cleaning_log*.json
+
+# Squeak / audio debug (generated WAV, PNG, JSON)
+umi_scripts_csw/squeak_debug/
