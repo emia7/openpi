@@ -1,4 +1,4 @@
-"""从视频抽 PCM WAV 并读入 float32 波形（供 squeak_audio_gpt4o 等脚本复用，无传统 DSP 检测）。"""
+"""从视频抽 PCM WAV 并读入 float32 波形（供 play_video_check_audio、分段流水线等复用）。"""
 
 from __future__ import annotations
 

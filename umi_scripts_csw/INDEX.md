@@ -8,6 +8,7 @@
 
 | 脚本路径 | 核心功能 | 输入 | 输出 | 依赖 |
 |---------|---------|------|------|------|
+| **nano_sync_freq/segment_by_freq_markers.py** | **双 chirp 检峰 + 成对 + 视频切片**（无 ASR） | 含标音的 mp4/wav | `clip_*.mp4`、可选 `markers.json` | numpy、ffmpeg 或 imageio-ffmpeg |
 | data_cleaning/check_trajectory_anomalies.py | **轨迹异常检测** (完整分析) | MP4+JSON目录 | trajectory_anomaly_report.json | numpy |
 | data_cleaning/generate_visual_report.py | **可视化报告生成** | anomaly_report.json | HTML/Markdown报告 | 无额外依赖 |
 | data_cleaning/execute_data_cleaning.py | **执行数据清理** (删+重编号) | 数据目录 + anomaly报告 | cleaned/目录 | shutil |

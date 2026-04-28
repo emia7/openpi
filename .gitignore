@@ -181,3 +181,10 @@ cleaning_log*.json
 
 # 旧 squeak 调试图（若本地仍有该目录可忽略；当前云 API 脚本不生成此目录）
 umi_scripts_csw/squeak_debug/
+
+# T6 本地生成的静音测试音（由 nano_sync/fixtures/ensure_t6_wav.py 生成）
+umi_scripts_csw/nano_sync/fixtures/t6_stub.wav
+
+# nano_sync 本地切片/跑批输出（可再跑生成，勿提交大文件）
+umi_scripts_csw/nano_sync/out_*/
+umi_scripts_csw/nano_sync_freq/out_*/

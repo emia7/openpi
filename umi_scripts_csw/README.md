@@ -13,7 +13,8 @@ umi_scripts_csw/
 ├── data_conversion/                   # 数据格式转换
 ├── data_evaluation/                   # 数据评估与可视化
 ├── rosbag_tools/                      # ROSBag处理工具
-├── nano_sync/                         # 音视频同步工具 (原有)
+├── nano_sync/                         # 脚踏 TTS 口语锚点 + 百炼 Qwen ASR 切分
+├── nano_sync_freq/                    # 双 chirp 标音 + 本地互相关 + ffmpeg 切分（见 FREQ_WORKFLOW.md）
 └── utils/                             # 通用工具脚本
 ```
 
@@ -117,15 +118,106 @@ python data_cleaning/execute_data_cleaning.py \
 
 ---
 
-### nano_sync/ - 音视频同步
-**用途**: 录音棚同步信号处理 (原有目录，保持不变)
+### nano_sync_freq/ - 双 chirp 标定 + 本地切分
 
-| 脚本 | 功能 |
-|------|------|
-| detect_beep_in_video.py | 检测视频中的beep信号 |
-| generate_beep.py | 生成beep音频 |
-| keyboard_beep_listener.py | 键盘监听触发beep |
-| ... | ... |
+**用途**：采集中 **a/c** 播**两种 chirp**（非 TTS 口语），后期**纯本地**检峰 + 切片，**不依赖百炼与公网 URL**。
+
+| 文档 / 入口 | 说明 |
+|--------------|------|
+| [nano_sync_freq/FREQ_WORKFLOW.md](nano_sync_freq/FREQ_WORKFLOW.md) | **固定流程**（建 assets → 采集中 `pedal_freq_listener` → `segment_by_freq_markers` + 片尾约定） |
+| [nano_sync_freq/README.md](nano_sync_freq/README.md) | 依赖、试音、设计参数 |
+| [nano_sync_freq/segment_by_freq_markers.py](nano_sync_freq/segment_by_freq_markers.py) | 检测 + 成对 + `ffmpeg` 切 `clip_*.mp4` |
+
+**推荐后处理**（同目录下）：
+
+```bash
+cd umi_scripts_csw
+python3 nano_sync_freq/segment_by_freq_markers.py path/to/record.mp4 \
+  --cut-dir ./nano_sync_freq/out_freq_clips --markers-out ./nano_sync_freq/out_freq_clips/markers.json
+```
+
+与 **nano_sync**（TTS + ASR）的选用对照见 `FREQ_WORKFLOW.md` 文首表。
+
+---
+
+### nano_sync/ - 音视频同步 / 录制 TTS 锚点 + Qwen 切分
+**用途**: 脚踏板与主机口令同步；ASR 使用阿里云百炼 **DashScope** `qwen3-asr-flash-filetrans`（异步、句级时间戳）。**蜂鸣旧方案已删除**（仅保留 TTS + 百炼 ASR）。
+
+| 脚本/模块 | 作用 |
+|----------|------|
+| [record_marker_phrases.py](nano_sync/record_marker_phrases.py) | 与采集 TTS/后处理共用的「开始/停止录制」文案与关键词 |
+| [qwen_filetrans_asr.py](nano_sync/qwen_filetrans_asr.py) | 百炼异步 filetrans：提交任务、轮询、`transcription_url` 下载并映射为 `segments` |
+| [upload_wav_oss.py](nano_sync/upload_wav_oss.py) | 将导出的音轨上传至**阿里云 OSS**，输出公网 `https://` URL 供 ``--file-url``（需 `pip install oss2`） |
+| [record_marker_tts_listener.py](nano_sync/record_marker_tts_listener.py) | 采集中 a/c 触发 TTS（macOS `say` / Win PowerShell SAPI / Linux espeak）；`--self-test`；**无 pynput 时** `--use-stdin`；否则 `python3 -m pip install pynput` |
+| [segment_by_record_markers.py](nano_sync/segment_by_record_markers.py) | 本地 `path` + 公网 ``--file-url``（与音轨对齐）→ `clips` JSON；可选 ``--cut-dir``+ffmpeg；`--from-json` 离线调试 |
+| [record_marker_segments.py](nano_sync/record_marker_segments.py) | 从 `segments` 做锚点配对 |
+| [test_record_marker_segments.py](nano_sync/test_record_marker_segments.py) | 离线单测，无网络 |
+| [test_qwen_filetrans_normalize.py](nano_sync/test_qwen_filetrans_normalize.py) | 离线校验 filetrans JSON → `segments` 映射 |
+
+**环境**：在 `umi_scripts_csw/.env` 写入 `DASHSCOPE_API_KEY=sk-...`（勿提交）。国际地域可设 `DASHSCOPE_API_BASE=https://dashscope-intl.aliyuncs.com/api/v1`。
+
+**`--file-url`**：filetrans 要求音频为**公网 HTTPS 可直链访问**（与本地 `path` 音轨一致）。典型流程：从长视频**抽出 WAV**（见下方 E2E）→ **上传 OSS** 等对象存储 → 将脚本打印的 URL 传入 ``--file-url``。仅调试分段逻辑时用 `--from-json` 跳过 API。`upload_wav_oss.py` 执行时会**自动加载** `umi_scripts_csw/.env`（与百炼 Key 同文件；OSS 的 AK/SK 也写这里即可）。
+
+**与腕部（FastUMI 等）的配对**：本仓库**不提供**「nano 切段与腕部视角」的自动时间对齐脚本；请按各设备时间轴在标注或后处理中**人工对齐**。
+
+#### 采集端三系统（T5）
+
+| 系统 | TTS | 键盘 |
+|------|-----|------|
+| macOS | `say`（中文优先 Tingting 等） | `python3 -m pip install pynput`；装不上或权限问题时用 `--use-stdin` |
+| Windows | PowerShell `System.Speech`（`--self-test` 即可验） | 同上；`--use-stdin` 为每行输入 a/c 后回车 |
+| Linux | `espeak-ng` / `espeak` / `spd-say`（如 `sudo apt install espeak-ng`） | 同上；`--use-stdin` 在 TTY 下单键 |
+
+长视频多轮任务验收：任一下载到本机的 mp4，抽同轨 WAV → 上传得 `https` → `segment_by_record_markers --file-url`；**clips 条数应等于录制轮次**（如三轮开始/停止→3 条）；可 `--asr-only` 排查 ASR。
+
+#### nano 无本体：采集 → 公网音轨 → 分段（E2E）
+
+在仓库根下将 `umi_scripts_csw` 为当前工作目录，以下命令可逐行复制（路径请替换为真实文件）：
+
+```bash
+cd umi_scripts_csw
+
+# 1) 采集中：脚踏 → 主机 TTS（「开始录制」/「停止录制」）→ nano 一条长录（见 record_marker_tts_listener --self-test）
+
+# 2) 从长视频导出与画面对齐的 WAV（filetrans 需要与本地 path 为同一条音轨；亦可直接用 ffprobe/ ffmpeg）
+python3 -c "
+from pathlib import Path
+from audio_extract import probe_audio_with_ffmpeg, extract_audio_wav
+p = Path('path/to/nano_session.mp4')
+o = Path('/tmp/nano_session.wav')
+probe_audio_with_ffmpeg(p)
+extract_audio_wav(p, o, sample_rate=16000, mono=True)
+print('wrote', o)
+"
+
+# 3) 上传得稳定 HTTPS URL（配置 OSS 环境变量后；依赖 pip install oss2）
+#    python3 nano_sync/upload_wav_oss.py /tmp/nano_session.wav
+
+# 4) 百炼 filetrans + 按口令出 clips
+#    python3 nano_sync/segment_by_record_markers.py path/to/nano_session.mp4 \\
+#        --file-url 'https://your-bucket.oss-xxx.aliyuncs.com/.../nano_session.wav' \\
+#        --out-json /tmp/nano_clips.json
+
+# 5) 可选：按时间窗裁片
+#    python3 nano_sync/segment_by_record_markers.py path/to/nano_session.mp4 \\
+#        --file-url '...同上...' --out-json /tmp/nano_clips.json --cut-dir ./cuts
+```
+
+快速抽查画面/音轨统计（**不**走百炼）：
+
+```bash
+python3 play_video_check_audio.py path/to/nano_session.mp4 --extract-only
+```
+
+**分段门禁 T6（`--from-json`）**：首次需生成本地静音占位 WAV（**不提交 git**）：
+
+```bash
+python3 nano_sync/fixtures/ensure_t6_wav.py
+python3 nano_sync/segment_by_record_markers.py nano_sync/fixtures/t6_stub.wav \\
+  --from-json nano_sync/fixtures/t6_stub_asr.json --out-json /tmp/clips.json
+```
+
+| `upload_wav_oss` 新增/变更 | 抽轨自测（T4）+ 带 Key 的 filetrans 全链路（T7、建议 T8） |
 
 ---
 
