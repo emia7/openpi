@@ -8,9 +8,9 @@
    python umi_scripts_csw/play_video_check_audio.py <video> --extract-only
 2)（macOS）抽轨后用扬声器试听中间 WAV
    python umi_scripts_csw/play_video_check_audio.py <video> --afplay
-3) 尖叫/短促声：用云模型听整段音
-   python umi_scripts_csw/squeak_audio_gpt4o.py <video>
-   或本脚本 --squeak（同上，需 .env 中 OPENAI_API_KEY + OPENAI_BASE_URL）
+
+nano 长录后如需按「开始录制 / 停止录制」做句级切分，见 README「nano_sync」与
+``nano_sync/segment_by_record_markers.py``（百炼 filetrans + 公网 ``--file-url``）。
 
 仅播放画面（不播放系统音频）时：
   python umi_scripts_csw/play_video_check_audio.py <video>
@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -130,22 +129,10 @@ def main() -> None:
         action="store_true",
         help="抽轨后用 macOS afplay 播完整 WAV(仅 macOS)",
     )
-    parser.add_argument(
-        "--squeak",
-        action="store_true",
-        help="不弹窗，调用 squeak_audio_gpt4o.py（VectorEngine/OpenAI 兼容，需 umi_scripts_csw/.env）",
-    )
     args = parser.parse_args()
     video = args.video.expanduser()
     if not video.is_file():
         raise SystemExit(f"文件不存在: {video}")
-
-    if args.squeak:
-        gpt4o = _UMI / "squeak_audio_gpt4o.py"
-        if not gpt4o.is_file():
-            raise SystemExit(f"未找到: {gpt4o}")
-        r = subprocess.run([sys.executable, str(gpt4o), str(video)], check=False)
-        raise SystemExit(r.returncode)
 
     if args.extract_only or args.afplay:
         wav = run_extract_and_stats(video)

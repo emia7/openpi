@@ -1,12 +1,14 @@
-timestamp,scheme_id,camera,position,test_duration_min,fov_coverage_score,fov_coverage_notes,stability_score,stability_notes,comfort_score,comfort_notes,aruco_detection_rate,aruco_notes,depth_quality_score,depth_quality_notes,overall_score,dealbreaker_issues,recommended_for
+timestamp,scheme_id,camera,position,fov_coverage_score,fov_coverage_notes,stability_score,stability_notes,comfort_score,comfort_notes,aruco_detection_rate,aruco_notes,depth_quality_score,depth_quality_notes,overall_score,dealbreaker_issues,recommended_for,details
 # 使用说明：
 # 1. 每次测试后复制一行，填入实际数据
-# 2. scheme_id 必须是以下之一：DJI-C, DJI-H, ORB-C, ORB-H, ZED-C, ZED-H, WIDE-C, WIDE-H
+# 2. scheme_id 必须是以下之一：DJI-C, DJI-H, ORB-C, ORB-H, ZED-C, ZED-H, WIDE-H, LUMOS-H
 # 3. 评分范围：1-5分，5分最佳
 # 4. aruco_detection_rate 填写百分比，如 95 表示 95%
 # 5. 无深度相机跳过 depth_quality_score 和 depth_quality_notes
 # 6. dealbreaker_issues 填写关键问题，如 "视野不够" / "检测率低" / "佩戴不适" 等
 # 7. recommended_for 填写推荐场景，如 "双手活动范围小的场景" / "需要深度的任务" 等
-2025-04-22,DJI-H,大疆Nano,头上,10,5,广角，视角足够,3,头部晃动较为明显,5,没什么感觉,-,-,-,-,4,-,头部晃动场景下需要稳定化策略
-# 示例行（测试后删除或覆盖）：
-# 2025-04-22, DJI-C, 大疆Nano,胸口,10,3,双手分开40cm时右侧出框,4,画面稳定但偶有抖动,5,几乎无感,85,部分帧检测不到右侧标记,-,-,3,视野不够宽,双手活动范围小的场景
+# 8. details 填写详细描述，包括同步方式、接线情况、数据量、机械结构等
+2025-04-22,DJI-H,大疆Nano,头上,5,广角，视角足够,3,头部晃动较为明显,5,没什么感觉,-,-,-,-,4,同步方式,头部晃动场景下需要稳定化策略,有配套头戴支架。不接线，实时通过屏幕看录制情况。需要一个外部事件做同步，比如声音或者灯。后期同步可能性不大，费时费力费token，准确性也不高。数据量40min约13G，可以接受
+2025-04-25,LUMOS-H,Lumos,头上,5,鱼眼180度，拉满,4,稳定性比较高,3,接线方便一点，但是相机太沉啦,-,-,-,-,3,重量；冗余太多；带宽,需要解决带宽和重量问题,有配套头戴支架。带宽是大问题，相机太沉，同步还是ros来做
+2025-04-25,ZED-H,ZED,头上,4,无配套支架,3,稳定性一般,2,舒适度较差,-,-,-,-,3,重量；大小；接线口,需要优化佩戴方式,无配套头戴支架。使用ROS进行同步，需要配置对应的ZED SDK。可通过zed-ros-wrapper实现，支持发布彩色图像、深度图和点云，与FastUMI集成方式和D435i一致
+2025-04-25,WIDE-H,广角相机,头上,5,FOV比较大，没问题,3,和nano差不多,1,完全不可用,接线方式导致佩戴舒适度极差,-,-,-,-,2,接线方式,接线方式改进后可能可用,需要接线，同步可以通过ros来做，和d435没有本质区别。便宜量大，但感觉机械结构有点脆

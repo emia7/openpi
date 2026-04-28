@@ -12,6 +12,7 @@ Usage:
 
 import argparse
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -220,8 +221,32 @@ def process_episode(stage1_dir: Path, episode_name: str, max_frames: int = 100, 
     return output
 
 
-def main(stage1_dir: str, max_frames: int = 100, debug: bool = False):
+def copy_episode_files(stage1_path: Path, output_path: Path, episode_name: str):
+    """Copy all files for an episode to output directory."""
+    patterns = [
+        f"{episode_name}_left.json",
+        f"{episode_name}_left.mp4",
+        f"{episode_name}_right.json",
+        f"{episode_name}_right.mp4",
+        f"{episode_name}_third.mp4",
+    ]
+    for pattern in patterns:
+        src = stage1_path / pattern
+        if src.exists():
+            import shutil
+            shutil.copy2(src, output_path / pattern)
+
+
+def main(stage1_dir: str, output_dir: str = None, max_frames: int = 100, debug: bool = False):
     stage1_path = Path(stage1_dir)
+    
+    # Setup output directory
+    if output_dir:
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        print(f"[INFO] Output directory: {output_path}")
+    else:
+        output_path = stage1_path
     
     # Find all episodes
     left_jsons = sorted(stage1_path.glob("episode_*_left.json"))
@@ -231,22 +256,27 @@ def main(stage1_dir: str, max_frames: int = 100, debug: bool = False):
     
     success_count = 0
     fail_count = 0
+    skip_count = 0
     
     for left_json in left_jsons:
         episode_name = left_json.stem.replace("_left", "")
         
-        # Check if already processed
-        third_json = stage1_path / f"{episode_name}_third.json"
+        # Check if already processed in output
+        third_json = output_path / f"{episode_name}_third.json"
         if third_json.exists():
             print(f"[SKIP] {episode_name}: Already has third.json")
-            success_count += 1
+            skip_count += 1
             continue
         
-        # Process
-        result = process_episode(stage1_path, episode_name, max_frames, debug)
+        # If using separate output dir, copy files first
+        if output_path != stage1_path:
+            copy_episode_files(stage1_path, output_path, episode_name)
+        
+        # Process (read from output_path where files now exist)
+        result = process_episode(output_path, episode_name, max_frames, debug)
         
         if result:
-            # Save to third.json
+            # Save to third.json in output_path
             third_json.write_text(json.dumps(result, indent=2), encoding="utf-8")
             print(f"[OK] {episode_name}: Saved to {third_json.name}")
             success_count += 1
@@ -259,18 +289,21 @@ def main(stage1_dir: str, max_frames: int = 100, debug: bool = False):
     print(f"Total episodes: {len(left_jsons)}")
     print(f"Success: {success_count}")
     print(f"Failed/No markers: {fail_count}")
+    print(f"Skipped (already processed): {skip_count}")
     print(f"{'='*60}")
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Detect ArUco markers from video")
     p.add_argument("--stage1_dir", required=True, help="Directory containing episode files")
+    p.add_argument("--output_dir", help="Output directory (default: same as stage1_dir)")
     p.add_argument("--max_frames", type=int, default=100, help="Max frames to check per episode")
     p.add_argument("--debug", action="store_true", help="Save debug visualizations")
     args = p.parse_args()
     
     main(
         stage1_dir=args.stage1_dir,
+        output_dir=args.output_dir,
         max_frames=args.max_frames,
         debug=args.debug,
     )

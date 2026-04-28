@@ -33,7 +33,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from openpi.policies.pose_util import (
     mat_to_rot6d,
     pose7_to_mat,
-    mat_to_pose7,
 )
 
 
@@ -164,7 +163,11 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
         T_slam_to_cam_left = None
         T_slam_to_cam_right = None
         
-        if fp_data is not None:
+        # Check if both hands are detected
+        has_left = fp_data is not None and "left_in_cam" in fp_data
+        has_right = fp_data is not None and "right_in_cam" in fp_data
+        
+        if has_left and has_right:
             # ArUco poses in camera frame at detection frames
             # JSON format: {"translation": [x,y,z], "quaternion": [qx,qy,qz,qw]}
             left_in_cam = fp_data["left_in_cam"]
@@ -186,6 +189,13 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
             # World coordinate system: detected left hand position as origin
             T_world_cam = np.linalg.inv(T_left_cam_detect)
             
+            # Validate detection frames are within SLAM data bounds
+            if detection_frame_left >= len(poses_l7) or detection_frame_right >= len(poses_r7):
+                print(f"[SKIP] {stem}: Detection frame out of bounds "
+                      f"(left@{detection_frame_left}/{len(poses_l7)}, "
+                      f"right@{detection_frame_right}/{len(poses_r7)})")
+                continue
+            
             # Get SLAM poses at the actual detection frames (not frame 0)
             # This is the key difference for multi-frame detection support
             T_left_slam_detect = pose7_to_mat(poses_l7[detection_frame_left])
@@ -197,6 +207,13 @@ def main(stage1_dir: str, repo: str, robot_type: str, task: str, fps_override: i
             T_slam_to_cam_right = T_right_cam_detect @ np.linalg.inv(T_right_slam_detect)
             
             print(f"[{stem}] ArUco: left@frame{detection_frame_left}, right@frame{detection_frame_right}")
+        else:
+            # Skip episodes where both hands are not detected
+            missing = []
+            if not has_left: missing.append("left")
+            if not has_right: missing.append("right")
+            print(f"[SKIP] {stem}: Missing ArUco detection for {', '.join(missing)}")
+            continue
 
         # Iterate through videos
         it_l = iio.imiter(left_mp4)

@@ -188,3 +188,7 @@ umi_scripts_csw/nano_sync/fixtures/t6_stub.wav
 # nano_sync 本地切片/跑批输出（可再跑生成，勿提交大文件）
 umi_scripts_csw/nano_sync/out_*/
 umi_scripts_csw/nano_sync_freq/out_*/
+
+# macOS
+.DS_Store
+**/.DS_Store
