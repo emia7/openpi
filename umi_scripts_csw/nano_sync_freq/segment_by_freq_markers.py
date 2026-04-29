@@ -110,6 +110,60 @@ def _media_duration(path: Path, det: dict[str, Any]) -> float:
     return 0.0
 
 
+def _enrich_manual_review_for_clips(
+    manual: list[dict[str, Any]],
+    clips: list[Any],
+    *,
+    eps: float = 0.02,
+) -> list[dict[str, Any]]:
+    """
+    将 ``manual_review`` 里每条时刻 ``t`` 与已应用尾音后的 ``pairing`` 切片对应：
+    ``in_clip_index`` / ``in_clip_basename`` 表示 t 是否落在某段内；否则可标间隙 ``in_gap_*`` + ``note``。
+    """
+    if not manual:
+        return []
+    out: list[dict[str, Any]] = []
+    if not clips:
+        for m in manual:
+            d = dict(m)
+            d["in_clip_index"] = None
+            d["in_clip_basename"] = None
+            d["in_gap_after_clip"] = None
+            d["in_gap_before_clip"] = None
+            d["note"] = None
+            out.append(d)
+        return out
+    sorted_c = sorted(clips, key=lambda c: int(c.index))
+    for m in manual:
+        d = dict(m)
+        t = float(m.get("t", 0.0))
+        d["in_clip_index"] = None
+        d["in_clip_basename"] = None
+        d["in_gap_after_clip"] = None
+        d["in_gap_before_clip"] = None
+        d["note"] = None
+        for c in sorted_c:
+            t0, t1 = float(c.t_start), float(c.t_end)
+            if t0 - eps <= t <= t1 + eps:
+                d["in_clip_index"] = int(c.index)
+                d["in_clip_basename"] = f"clip_{c.index:04d}"
+                break
+        if d["in_clip_index"] is not None:
+            out.append(d)
+            continue
+        for k in range(len(sorted_c) - 1):
+            a, b = sorted_c[k], sorted_c[k + 1]
+            if float(a.t_end) - eps < t < float(b.t_start) + eps:
+                d["in_gap_after_clip"] = int(a.index)
+                d["in_gap_before_clip"] = int(b.index)
+                d["note"] = (
+                    f"在 clip_{a.index:04d} 与 clip_{b.index:04d} 时间间隙 (t={t:.3f}s)"
+                )
+                break
+        out.append(d)
+    return out
+
+
 def _load_mono_48k(path: Path) -> np.ndarray:
     if path.suffix.lower() in (".wav", ".wave"):
         y, sr = read_wav_f32(path)
@@ -121,7 +175,12 @@ def _load_mono_48k(path: Path) -> np.ndarray:
         return resample_mono(y, sr, config.SAMPLE_RATE_HZ)
 
 
-def _run_detect(path: Path, *, snr_cap: float | None) -> dict[str, Any]:
+def _run_detect(
+    path: Path,
+    *,
+    snr_cap: float | None,
+    apply_sequence_prior: bool | None = None,
+) -> dict[str, Any]:
     with tempfile.TemporaryDirectory() as tdir:
         tdirp = Path(tdir)
         tw = tdirp / "t.wav"
@@ -130,10 +189,18 @@ def _run_detect(path: Path, *, snr_cap: float | None) -> dict[str, Any]:
                 path, tw, sample_rate=config.SAMPLE_RATE_HZ, mono=True
             )
         elif path.suffix.lower() in (".wav", ".wave"):
-            return detect_wav(path, snr_cap=snr_cap)
+            return detect_wav(
+                path,
+                snr_cap=snr_cap,
+                apply_sequence_prior=apply_sequence_prior,
+            )
         else:
             raise SystemExit("不支持的输入，请用 mp4/mov/webm/m4a 或 wav")
-        return detect_wav(tw, snr_cap=snr_cap)
+        return detect_wav(
+            tw,
+            snr_cap=snr_cap,
+            apply_sequence_prior=apply_sequence_prior,
+        )
 
 
 def main() -> None:
@@ -177,6 +244,11 @@ def main() -> None:
         action="store_true",
         help="当出现「多一个停、少一个起」时，不再在局部窗口补扫弱 start",
     )
+    ap.add_argument(
+        "--no-sequence-prior",
+        action="store_true",
+        help="关闭 S/T 交替先验（多馀停丢弃、近阈值进人工表）；与 config 默认相反时显式关",
+    )
     args = ap.parse_args()
     path = args.path.expanduser()
     if not path.is_file():
@@ -194,7 +266,10 @@ def main() -> None:
                 if args.peak_snr_cap is not None
                 else config.PEAK_SNR_CAP
             )
-        det = _run_detect(path, snr_cap=snr_cap)
+        prior_arg: bool | None = False if args.no_sequence_prior else None
+        det = _run_detect(
+            path, snr_cap=snr_cap, apply_sequence_prior=prior_arg
+        )
     st = [float(x) for x in det.get("start_times", [])]
     stp = [float(x) for x in det.get("stop_times", [])]
     dur = _media_duration(path, det)
@@ -232,6 +307,7 @@ def main() -> None:
     pr = apply_stop_beep_tail(
         pr, tail_sec=tail_sec, duration_sec=dur if dur > 0.0 else None
     )
+    mr_raw = list(det.get("manual_review", []))
     out_payload: dict[str, Any] = {
         "file": str(path.resolve()),
         "duration_sec": dur,
@@ -241,6 +317,8 @@ def main() -> None:
         "stop_beep_tail_sec": tail_sec,
         "pairing": pair_to_jsonable(pr),
         "process_warnings": pr.warnings,
+        "manual_review": _enrich_manual_review_for_clips(mr_raw, pr.clips),
+        "sequence_prior_log": list(det.get("sequence_prior_log", [])),
     }
     if not (args.markers_in and args.markers_in.is_file()):
         out_payload["peak_snr_cap"] = (

@@ -33,6 +33,14 @@ CROSS_CROSSTALK_MERGE_SEC: float = 0.07
 PREFER_S_WHEN_T_WINS_BUT_MARGIN_BELOW: float | None = None
 # 当 stop 比 start 多、出现 unpaired stop 时，在相邻区间用局部门限再扫 start 并插入
 REFINE_UNPAIRED_STARTS: bool = True
+# S/T 时间先验：合并簇按时间展平后，期望起-停-起-停…；在「下一段起」前多余的「停」
+# 最多容忍丢弃 MAX 次，超过的停标进 manual_review；与 sequence_prior 模块一致
+PRIOR_ST_ALTERNATION_ENABLE: bool = True
+MAX_SPURIOUS_T_BEFORE_NEXT_S: int = 3
+# 两路都有的簇内，|max(rt)−max(rs)| 若小于此值，记 manual_review（low_ncc_margin）供人复核；None=不记
+MANUAL_REVIEW_NCC_MARGIN_BELOW: float | None = 0.04
+# 调试：在 detect 结果中附带 merged_events 全量（JSON 很大，默认关）
+EXPORT_MERGED_EVENT_LOG: bool = False
 # 再扫时：上一停之后、距本停之前，留足空白，避免和 stop 模板串扰
 REFINE_AFTER_PREV_STOP_SEC: float = 0.04
 REFINE_BEFORE_STOP_SEC: float = 0.14

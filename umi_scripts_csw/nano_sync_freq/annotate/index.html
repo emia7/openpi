@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>标定时间轴 — 人工修正</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <header class="bar">
+    <h1>标定时间轴</h1>
+    <p class="hint">快捷键 <kbd>a</kbd> 起标（开始）<kbd>c</kbd> 停标（结束，与采集合）；<kbd>Space</kbd> 播放/暂停。输入框内不打标。</p>
+    <div class="tools">
+      <label><input type="file" id="fileMarkers" accept=".json" /> 加载 markers.json</label>
+      <label><input type="file" id="fileVideo" accept="video/*" /> 加载视频</label>
+      <label class="ck"><input type="checkbox" id="onlyUserLayer" /> 仅显示可编辑层</label>
+      <label class="ck"><input type="checkbox" id="showPreview" checked /> 预览成对片段时间条</label>
+      <button type="button" id="btnAddS">在播放头加「起」</button>
+      <button type="button" id="btnAddT">在播放头加「停」</button>
+      <button type="button" id="btnExport">导出 edited_markers.json</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="player">
+      <video id="v" controls crossorigin="anonymous" playsinline>
+        您的浏览器不支持 video
+      </video>
+    </section>
+
+    <section class="timeblock">
+      <div class="timeReadout" id="timeReadout">0.000s / 0.000s</div>
+      <div class="viewControls" id="viewControls">
+        <span id="viewRange" class="viewRange" title="当前显示的时间窗">窗口: —</span>
+        <span class="viewBtnRow">
+          <button type="button" id="btnZoomIn" title="以播放头为锚点放大（无播放头则窗口中心）">放大</button>
+          <button type="button" id="btnZoomOut" title="缩小">缩小</button>
+          <button type="button" id="btnFit" title="显示整段">全长</button>
+          <button type="button" id="btnCenterPlay" title="以当前播放头为中心，不改缩放">跟播放头</button>
+        </span>
+        <span class="viewBtnRow viewPan">
+          <button type="button" id="panLeft" title="平移时间窗到更早">◀</button>
+          <button type="button" id="panRight" title="平移时间窗到更晚">▶</button>
+        </span>
+        <span class="viewHint">在进度条上<strong>滚轮</strong>缩放；<strong>拖曳</strong>平移；单击仍跳转到时间。</span>
+      </div>
+      <div class="rail" id="rail" aria-label="时间轴">
+        <div class="durationBar" id="durationBar"></div>
+        <div class="playhead" id="playhead"></div>
+        <div class="layer system" id="layerSys"></div>
+        <div class="layer user" id="layerUser"></div>
+        <div class="layer preview" id="layerPreview"></div>
+        <div class="layer manual" id="layerMan"></div>
+      </div>
+      <ul class="legend">
+        <li><span class="sw systemS"></span> 系统起</li>
+        <li><span class="sw systemT"></span> 系统停</li>
+        <li><span class="sw userS"></span> 可编辑起</li>
+        <li><span class="sw userT"></span> 可编辑停</li>
+        <li><span class="sw man"></span> manual_review / 成对预览条</li>
+      </ul>
+    </section>
+
+    <section class="tables">
+      <div>
+        <h2>可编辑 — 起 <button type="button" id="btnSortS">时间排序</button></h2>
+        <table id="tblS"><thead><tr><th>#</th><th>时间 (s)</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+      <div>
+        <h2>可编辑 — 停 <button type="button" id="btnSortT">时间排序</button></h2>
+        <table id="tblT"><thead><tr><th>#</th><th>时间 (s)</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section class="manual" id="manualBlock">
+      <h2>manual_review（只读参考）</h2>
+      <table id="tblMan"><thead><tr><th>t (s)</th><th>reason</th><th>label</th><th>clip 提示</th></tr></thead><tbody></tbody></table>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

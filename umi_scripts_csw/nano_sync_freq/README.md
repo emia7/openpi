@@ -1,8 +1,8 @@
 # 双音标定分段（nano_sync_freq）
 
-与 `nano_sync` 的 **ASR/口语锚点** 方案**完全独立**：采集中播放**两种**不同线性 chirp（`assets/start.wav`、`assets/stop.wav`），后期在音轨上做**归一化互相关**检峰，再 `ffmpeg` 切片。
+采集中在耳机里播**两种**线性 chirp（`assets/start.wav`、`assets/stop.wav`）打点；后处理在音轨上做**归一化互相关**检峰，再 `ffmpeg` 切片。本目录**自成一套**。
 
-**团队固定流程（采集约定、串扰合并与定类、成对、切片、验收）以 [`FREQ_WORKFLOW.md`](FREQ_WORKFLOW.md) 为唯一权威**；本文件只补充依赖、试音与参数索引。
+**固定操作顺序、给新人照做**以 [`FREQ_WORKFLOW.md`](FREQ_WORKFLOW.md) 为准；本文件补充依赖、试音与参数索引。
 
 ## 依赖
 
@@ -11,7 +11,7 @@
 - 播标：mac 推荐系统自带 `afplay`；否则 `ffplay` 或 `pip install sounddevice soundfile`
 - **采集按键**：
   - **默认**：`pedal_freq_listener.py` **只监听当前终端**，无需 `pynput`。
-  - **全局**：同脚本加 ``--global`` 并 ``pip install pynput``，与 `record_marker_tts_listener` 一样在桌面会话里全局听键；Linux **Wayland** 下常不可用，见脚本内说明（可换 X11 或仍用终端模式）。
+  - **全局**：同脚本加 ``--global`` 并 ``pip install pynput``，在整桌会话里全局听键；Linux **Wayland** 下常不可用，见脚本内说明（可换 X11 或仍用终端模式）。
 
 ## 一次性：生成参考音
 
@@ -24,7 +24,7 @@ python3 nano_sync_freq/build_assets.py
 
 ## 采集中
 
-与 `record_marker_tts_listener` **同一套键位**：**a = 开始一段**、**c = 结束一段**（播 chirp，不播口语）。
+与 **FREQ_WORKFLOW** 中约定一致：**a = 开一段**、**c = 停一段**；播 **chirp**，不录人声口令。
 
 **本终端监听（默认，无 pynput）**：
 
@@ -75,14 +75,6 @@ python3 nano_sync_freq/segment_by_freq_markers.py /path/to/record.mp4 \
 
 切片输出目录建议放 `nano_sync_freq/out_*/`（已加入根 `.gitignore`）或仓库外路径。
 
-## 与 `nano_sync` 的边界
-
-| 需求 | 使用 |
-|------|------|
-| 脚踏 A/C 播**标定 chirp**（进后期互相关切分） | `nano_sync_freq/pedal_freq_listener.py` |
-| 脚踏 A/C 播**口语 TTS**「开始/停止录制」 | `nano_sync/record_marker_tts_listener.py` |
-| 百炼 ASR 按口语切分 | `nano_sync` + `RECORD_MARKERS_WORKFLOW.md` |
-
 ## 测试
 
 在 `umi_scripts_csw` 下：
@@ -97,6 +89,8 @@ python3 -m pytest nano_sync_freq/tests/ -q
 
 默认与细节见 `config.py`：48 kHz、标音约 0.12 s、上调频/下调频 chirp、检峰与 `MIN_PEAK_DISTANCE_SEC`。
 
-**与当前实现强相关、改前请读 `FREQ_WORKFLOW.md` 相应节**：`CROSS_CROSSTALK_MERGE_SEC`（两路 NCC 串扰合并窗）、`FAVOR_S_FOR_FIRST_MERGED_CLUSTER`（首簇约定为开始）、`PEAK_SNR_CAP`、`REFINE_UNPAIRED_STARTS` 等。
+**与当前实现强相关、调参前请对照 `config.py` 与源码注释**；快速流程以 [`FREQ_WORKFLOW.md`](FREQ_WORKFLOW.md) 为准。涉及例如：`CROSS_CROSSTALK_MERGE_SEC`、
+`FAVOR_S_FOR_FIRST_MERGED_CLUSTER`、**`PRIOR_ST_ALTERNATION_ENABLE` / `MAX_SPURIOUS_T_BEFORE_NEXT_S`**
+（起停时间先验）、`MANUAL_REVIEW_NCC_MARGIN_BELOW`、`PEAK_SNR_CAP`、`REFINE_UNPAIRED_STARTS` 等。
 
 成对容差 `PAIR_TOLERANCE_SEC`；**片尾**默认 `INCLUDE_STOP_BEEP_TAIL_SEC = None`（与 `stop` 模板等长的延长）。

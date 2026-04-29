@@ -115,24 +115,12 @@ def _merge_opposing_peaks_to_one_label(
     *,
     favor_s_for_first_merged: bool = True,
     prefer_s_when_t_wins_by_less_than: float | None = None,
-) -> tuple[list[int], list[int]]:
+) -> tuple[list[int], list[int], list[dict[str, Any]]]:
     """
-    两路 NCC 各自找峰后，**同一次发声**在时间上只差几 ms 会在 ``p_s`` 与 ``p_t`` 各留一个下标。
-
-    将相邻峰时间差 ≤ ``merge_sec`` 的段**合并为一次事件**（链式）。簇内分别在 **S 路峰**上取
-    ``max(rs)``、在 **T 路峰**上取 ``max(rt)``（同一下标上两条 NCC 不可比：真正的开始峰处 ``rt`` 很弱、
-    停峰处 ``rs`` 很弱），较大者定类；    平手时略偏向**开始**以稳定输出。
-
-    当 ``favor_s_for_first_merged`` 为真且**整段第一簇**同时含 S/T 两路峰时，**约定首标为「开始」**，
-    取 ``start`` 路中 ``rs`` 最大者，避免 crosstalk 在停上略高时把首记判成停（与 231204 类素材一致）。
-
-    ``prefer_s_when_t_wins_by_less_than`` 非空时：若本应以 max(rt) 判为「停」但
-    ``max(rt)-max(rs)`` 小于该阈值，则改判为「开始」（远场/机身麦上停模板略胜、差值极小的错判）。
-
-    成对后仍是：每个**开始**配第一个**其后的结束** → 拆 [开始, 停] 片段，与播标流程一致。
+    第三项 ``merged_event_log``：时间有序，供 ``sequence_prior`` 与人工复核。
     """
     if not p_s and not p_t:
-        return [], []
+        return [], [], []
     set_s = {int(i) for i in p_s}
     set_t = {int(i) for i in p_t}
     g = int(max(1, round(float(merge_sec) * float(sample_rate))))
@@ -148,38 +136,75 @@ def _merge_opposing_peaks_to_one_label(
     blocks.append(cur)
     out_s: list[int] = []
     out_t: list[int] = []
+    event_log: list[dict[str, Any]] = []
+    amb_thr = getattr(config, "MANUAL_REVIEW_NCC_MARGIN_BELOW", None)
+
+    def _push(
+        k_star: int,
+        label: str,
+        *,
+        is_dual: bool,
+        best_s: float,
+        best_t: float,
+    ) -> None:
+        margin = float(best_t) - float(best_s) if is_dual else 0.0
+        amb = bool(
+            is_dual
+            and amb_thr is not None
+            and abs(margin) < float(amb_thr)
+        )
+        event_log.append(
+            {
+                "k": int(k_star),
+                "label": label,
+                "is_dual": is_dual,
+                "best_s": float(best_s),
+                "best_t": float(best_t),
+                "margin": float(margin),
+                "manual_ambig": amb,
+            }
+        )
+
     for bi, b in enumerate(blocks):
         bs = [i for i in b if i in set_s]
         btt = [i for i in b if i in set_t]
         if not btt:
-            k_star = max(bs, key=lambda k: float(rs[k]))
-            out_s.append(int(k_star))
+            k_star = int(max(bs, key=lambda k: float(rs[k])))
+            v_s, v_t = float(rs[k_star]), float(rt[k_star])
+            out_s.append(k_star)
+            _push(k_star, "S", is_dual=False, best_s=v_s, best_t=v_t)
         elif not bs:
-            k_star = max(btt, key=lambda k: float(rt[k]))
-            out_t.append(int(k_star))
+            k_star = int(max(btt, key=lambda k: float(rt[k])))
+            v_s, v_t = float(rs[k_star]), float(rt[k_star])
+            out_t.append(k_star)
+            _push(k_star, "T", is_dual=False, best_s=v_s, best_t=v_t)
         else:
-            if bool(favor_s_for_first_merged) and bi == 0 and bs and btt:
-                k_star = max(bs, key=lambda k: float(rs[k]))
-                out_s.append(int(k_star))
-                continue
             best_s = max(float(rs[i]) for i in bs)
             best_t = max(float(rt[j]) for j in btt)
+            if bool(favor_s_for_first_merged) and bi == 0 and bs and btt:
+                k_star = int(max(bs, key=lambda k: float(rs[k])))
+                out_s.append(k_star)
+                _push(k_star, "S", is_dual=True, best_s=best_s, best_t=best_t)
+                continue
             margin_t_win = best_t - best_s
             pm = prefer_s_when_t_wins_by_less_than
             if best_s >= best_t:
-                k_star = max(bs, key=lambda k: float(rs[k]))
-                out_s.append(int(k_star))
+                k_star = int(max(bs, key=lambda k: float(rs[k])))
+                out_s.append(k_star)
+                _push(k_star, "S", is_dual=True, best_s=best_s, best_t=best_t)
             elif (
                 pm is not None
                 and float(pm) > 0.0
                 and margin_t_win < float(pm)
             ):
-                k_star = max(bs, key=lambda k: float(rs[k]))
-                out_s.append(int(k_star))
+                k_star = int(max(bs, key=lambda k: float(rs[k])))
+                out_s.append(k_star)
+                _push(k_star, "S", is_dual=True, best_s=best_s, best_t=best_t)
             else:
-                k_star = max(btt, key=lambda k: float(rt[j]))
-                out_t.append(int(k_star))
-    return sorted(out_s), sorted(out_t)
+                k_star = int(max(btt, key=lambda k: float(rt[k])))
+                out_t.append(k_star)
+                _push(k_star, "T", is_dual=True, best_s=best_s, best_t=best_t)
+    return sorted(out_s), sorted(out_t), event_log
 
 
 def _indices_to_sec(indices: list[int], sample_rate: int, template_len: int) -> list[float]:
@@ -194,6 +219,7 @@ def detect_marker_times(
     template_stop: np.ndarray,
     *,
     snr_cap: float | None = None,
+    apply_sequence_prior: bool | None = None,
 ) -> dict[str, Any]:
     x = np.ascontiguousarray(x, dtype=np.float64)
     if x.ndim != 1:
@@ -210,7 +236,7 @@ def detect_marker_times(
     )
     favor = bool(getattr(config, "FAVOR_S_FOR_FIRST_MERGED_CLUSTER", True))
     prefer_margin = getattr(config, "PREFER_S_WHEN_T_WINS_BUT_MARGIN_BELOW", None)
-    p_s, p_t = _merge_opposing_peaks_to_one_label(
+    p_s, p_t, merged_log = _merge_opposing_peaks_to_one_label(
         rs,
         rt,
         p_s0,
@@ -220,15 +246,35 @@ def detect_marker_times(
         favor_s_for_first_merged=favor,
         prefer_s_when_t_wins_by_less_than=prefer_margin,
     )
+    use_prior = (
+        apply_sequence_prior
+        if apply_sequence_prior is not None
+        else bool(getattr(config, "PRIOR_ST_ALTERNATION_ENABLE", True))
+    )
+    prior_log: list[str] = []
+    manual_review: list[dict[str, Any]] = []
+    if use_prior and merged_log:
+        from . import sequence_prior
+
+        p_s, p_t, prior_log, manual_review = sequence_prior.apply_st_alternation_prior(
+            merged_log, int(sample_rate)
+        )
     t_s = _indices_to_sec(p_s, sample_rate, template_start.size)
     t_t = _indices_to_sec(p_t, sample_rate, template_stop.size)
-    return {
+    out: dict[str, Any] = {
         "sample_rate": int(sample_rate),
         "start_times": t_s,
         "stop_times": t_t,
         "n_start_peaks": len(t_s),
         "n_stop_peaks": len(t_t),
     }
+    if prior_log:
+        out["sequence_prior_log"] = prior_log
+    if manual_review:
+        out["manual_review"] = manual_review
+    if bool(getattr(config, "EXPORT_MERGED_EVENT_LOG", False)):
+        out["merged_events"] = merged_log
+    return out
 
 
 def detect_wav(
@@ -236,6 +282,7 @@ def detect_wav(
     *,
     assets: dict[str, Path] | None = None,
     snr_cap: float | None = None,
+    apply_sequence_prior: bool | None = None,
 ) -> dict[str, Any]:
     """读 WAV（自动转单声道 float），相对 assets 中的 `start`/`stop` 参考检测。
 
@@ -253,7 +300,9 @@ def detect_wav(
     to = resample_mono(to, sro, config.SAMPLE_RATE_HZ)
     ts = np.ascontiguousarray(ts, dtype=np.float64)
     to = np.ascontiguousarray(to, dtype=np.float64)
-    d = detect_marker_times(y, sr, ts, to, snr_cap=snr_cap)
+    d = detect_marker_times(
+        y, sr, ts, to, snr_cap=snr_cap, apply_sequence_prior=apply_sequence_prior
+    )
     d["file"] = str(p.resolve())
     d["duration_sec"] = float(len(y)) / sr
     return d

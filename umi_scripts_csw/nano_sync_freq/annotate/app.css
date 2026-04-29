@@ -1,0 +1,212 @@
+/* nano_sync_freq/annotate */
+:root {
+  --bg: #1a1d23;
+  --fg: #e8eaed;
+  --muted: #9aa0a6;
+  --sys-s: #4a8a6a88;
+  --sys-t: #8a4a4a88;
+  --user-s: #3ecf7a;
+  --user-t: #e85d5d;
+  --man: #d4a520;
+  --prev: #6b7fd7;
+  --rail: #2d333b;
+  --play: #fff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.45;
+}
+.bar {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #3d4450;
+}
+.bar h1 { font-size: 1.1rem; margin: 0 0 0.5rem; }
+.hint { font-size: 0.85rem; color: var(--muted); margin: 0 0 0.6rem; }
+.hint kbd { background: #3d4450; padding: 0.1em 0.4em; border-radius: 3px; }
+.tools { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; font-size: 0.9rem; }
+.tools .ck { user-select: none; }
+button {
+  background: #3d5a80;
+  color: #fff;
+  border: none;
+  padding: 0.35rem 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+main { padding: 1rem; max-width: 1200px; margin: 0 auto; }
+.player video {
+  width: 100%;
+  max-height: 70vh;
+  background: #000;
+  border-radius: 6px;
+}
+.timeReadout { font-family: ui-monospace, monospace; font-size: 0.9rem; margin: 0.5rem 0; }
+.viewControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+.viewRange {
+  font-family: ui-monospace, monospace;
+  color: var(--fg);
+  flex: 1 1 14rem;
+}
+.viewBtnRow { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; align-items: center; }
+.viewPan button { padding: 0.25rem 0.55rem; min-width: 2rem; }
+.viewHint { font-size: 0.78rem; color: var(--muted); flex: 1 1 18rem; line-height: 1.35; }
+.viewHint strong { color: #c8cdd5; font-weight: 600; }
+.rail {
+  position: relative;
+  height: 86px;
+  background: var(--rail);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  margin: 0.5rem 0 0.25rem;
+  touch-action: none;
+  user-select: none;
+  /* 浅底格便于对齐刻度感 */
+  background-image: linear-gradient(90deg, #252a33 1px, transparent 1px);
+  background-size: 10% 100%;
+}
+.durationBar { position: absolute; inset: 0; }
+.playhead {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--play);
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 8px rgba(255, 255, 255, 0.5);
+  margin-left: -1.5px;
+  border-radius: 1px;
+}
+.playhead.playhead--before,
+.playhead.playhead--after {
+  opacity: 0.7;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 0 2px rgba(250, 190, 80, 0.9);
+}
+.layer { position: absolute; left: 0; right: 0; }
+/* 系统参考：单独一条，竖条略粗+半透明条底 */
+.layer.system { top: 2px; height: 20px; z-index: 1; opacity: 0.95; }
+.layer.user { top: 24px; height: 28px; z-index: 5; }
+.layer.preview { top: 56px; height: 12px; z-index: 3; opacity: 0.75; }
+.layer.manual { top: 72px; height: 12px; z-index: 4; }
+.rail .mk {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  /* 缺省 3px，各层再覆盖 */
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  pointer-events: auto;
+  transition: transform 0.08s ease, filter 0.08s ease;
+}
+/* 系统起停：3px，底层略淡条带增强存在感 */
+.layer.system::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 6px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, #2a333d 0%, #343b47 50%, #2a333d 100%);
+  border-radius: 2px;
+  z-index: 0;
+  pointer-events: none;
+}
+.layer.system .mk {
+  width: 4px;
+  margin-left: -2px;
+  z-index: 1;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+/* 可编辑起停：6px + 白描边 + 与色相配的柔光，最醒目 */
+.layer.user .mk {
+  width: 6px;
+  margin-left: -3px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+.layer.user .mk.userS {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 0 0 2px rgba(255, 255, 255, 0.3),
+    0 0 14px rgba(50, 200, 100, 0.65);
+}
+.layer.user .mk.userT {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 0 0 2px rgba(255, 255, 255, 0.3),
+    0 0 14px rgba(230, 80, 80, 0.6);
+}
+.layer.user .mk:hover {
+  transform: scaleX(1.15);
+  filter: brightness(1.15);
+  z-index: 10;
+}
+.rail .mk.systemS { background: linear-gradient(180deg, #5aad7a, #2d5c42); }
+.rail .mk.systemT { background: linear-gradient(180deg, #c45c5c, #5c2d2d); }
+.rail .mk.userS { background: linear-gradient(180deg, #5ef090, #1e9a4a); }
+.rail .mk.userT { background: linear-gradient(180deg, #ff7a7a, #b83030); }
+.layer.manual .mk {
+  width: 4px;
+  margin-left: -2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+.rail .clipSeg {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 1px;
+  background: var(--prev);
+  opacity: 0.4;
+  border: 1px solid var(--prev);
+  border-radius: 2px;
+  font-size: 8px;
+  line-height: 1;
+  padding: 0 1px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.legend { display: flex; flex-wrap: wrap; gap: 0.75rem 1rem; list-style: none; margin: 0.5rem 0 0; padding: 0; font-size: 0.8rem; color: var(--muted); }
+.legend .sw { display: inline-block; width: 14px; height: 8px; vertical-align: middle; border-radius: 1px; margin-right: 0.25rem; }
+.sw.systemS { background: #4a8a6a; }
+.sw.systemT { background: #8a4a4a; }
+.sw.userS { background: var(--user-s); }
+.sw.userT { background: var(--user-t); }
+.sw.man { background: var(--man); }
+.tables { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.25rem; }
+@media (max-width: 800px) { .tables { grid-template-columns: 1fr; } }
+.tables h2 { font-size: 0.95rem; margin: 0 0 0.4rem; }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+th, td { text-align: left; padding: 0.3rem 0.4rem; border-bottom: 1px solid #3d4450; }
+th { color: var(--muted); font-weight: 600; }
+tr input.tcell {
+  width: 100%;
+  min-width: 5rem;
+  background: #2d333b;
+  color: var(--fg);
+  border: 1px solid #4a5560;
+  padding: 0.2rem 0.3rem;
+  font-family: ui-monospace, monospace;
+}
+section.manual { margin-top: 1.5rem; }
+section.manual h2 { font-size: 0.95rem; }
