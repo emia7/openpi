@@ -2,14 +2,16 @@
 
 与 `nano_sync` 的 **ASR/口语锚点** 方案**完全独立**：采集中播放**两种**不同线性 chirp（`assets/start.wav`、`assets/stop.wav`），后期在音轨上做**归一化互相关**检峰，再 `ffmpeg` 切片。
 
-**固定流程（步骤、片尾约定、与 `nano_sync` 对照）以 [`FREQ_WORKFLOW.md`](FREQ_WORKFLOW.md) 为准**；本文件补充依赖、试音与参数细节。
+**团队固定流程（采集约定、串扰合并与定类、成对、切片、验收）以 [`FREQ_WORKFLOW.md`](FREQ_WORKFLOW.md) 为唯一权威**；本文件只补充依赖、试音与参数索引。
 
 ## 依赖
 
 - Python 3.9+、`numpy`
 - `ffmpeg` 或 `pip install imageio-ffmpeg`（与 `audio_extract` 一致）
 - 播标：mac 推荐系统自带 `afplay`；否则 `ffplay` 或 `pip install sounddevice soundfile`
-- **采集按键**：`pedal_freq_listener.py` **只监听当前终端**，无需 `pynput`（与 TTS 全局监听版不同）
+- **采集按键**：
+  - **默认**：`pedal_freq_listener.py` **只监听当前终端**，无需 `pynput`。
+  - **全局**：同脚本加 ``--global`` 并 ``pip install pynput``，与 `record_marker_tts_listener` 一样在桌面会话里全局听键；Linux **Wayland** 下常不可用，见脚本内说明（可换 X11 或仍用终端模式）。
 
 ## 一次性：生成参考音
 
@@ -29,10 +31,13 @@ python3 nano_sync_freq/build_assets.py
 ```bash
 cd /path/to/umi_scripts_csw
 python3 nano_sync_freq/build_assets.py    # 首次或改参后
-python3 nano_sync_freq/pedal_freq_listener.py
+python3 nano_sync_freq/pedal_freq_listener.py              # 本终端内 a/c
+# 或（需 pip install pynput；Linux 优先 X11 会话）— 全局听键，可去干别的窗口
+python3 nano_sync_freq/pedal_freq_listener.py --global
 ```
 
 - 先**让该终端窗口获得焦点**，再按 **a** / **c**（macOS / Linux 一般单键即响；Windows 为每行一个字母后回车）。  
+- 开始键为 **a** 时，若未处理终端转义，**上方向键**会发送 `ESC [ A`，末字节会被误识别为字母 `A`→`a` 而双触开始音；`pedal_freq_listener` 已**忽略**方向键/CSI 转义。  
 - 脚踏若模拟键盘，需把按键送到**正在运行脚本的终端**（焦点在该窗口时踏 A / 踏 C）。  
 - 自定义键位：``--start-key x --stop-key z``（单字符）。
 
@@ -90,4 +95,8 @@ python3 -m pytest nano_sync_freq/tests/ -q
 
 ## 设计参数
 
-见 `config.py`：48 kHz、标音约 0.12 s、开始为上调频 chirp、结束为下调频 chirp，检峰门限与最小峰距可随环境再调。成对容差 `PAIR_TOLERANCE_SEC`；**片尾**默认 `INCLUDE_STOP_BEEP_TAIL_SEC = None`（用与 `stop` 模板等长的延长）。
+默认与细节见 `config.py`：48 kHz、标音约 0.12 s、上调频/下调频 chirp、检峰与 `MIN_PEAK_DISTANCE_SEC`。
+
+**与当前实现强相关、改前请读 `FREQ_WORKFLOW.md` 相应节**：`CROSS_CROSSTALK_MERGE_SEC`（两路 NCC 串扰合并窗）、`FAVOR_S_FOR_FIRST_MERGED_CLUSTER`（首簇约定为开始）、`PEAK_SNR_CAP`、`REFINE_UNPAIRED_STARTS` 等。
+
+成对容差 `PAIR_TOLERANCE_SEC`；**片尾**默认 `INCLUDE_STOP_BEEP_TAIL_SEC = None`（与 `stop` 模板等长的延长）。

@@ -105,6 +105,83 @@ def _find_peaks(
     return idx
 
 
+def _merge_opposing_peaks_to_one_label(
+    rs: np.ndarray,
+    rt: np.ndarray,
+    p_s: list[int],
+    p_t: list[int],
+    sample_rate: int,
+    merge_sec: float,
+    *,
+    favor_s_for_first_merged: bool = True,
+    prefer_s_when_t_wins_by_less_than: float | None = None,
+) -> tuple[list[int], list[int]]:
+    """
+    两路 NCC 各自找峰后，**同一次发声**在时间上只差几 ms 会在 ``p_s`` 与 ``p_t`` 各留一个下标。
+
+    将相邻峰时间差 ≤ ``merge_sec`` 的段**合并为一次事件**（链式）。簇内分别在 **S 路峰**上取
+    ``max(rs)``、在 **T 路峰**上取 ``max(rt)``（同一下标上两条 NCC 不可比：真正的开始峰处 ``rt`` 很弱、
+    停峰处 ``rs`` 很弱），较大者定类；    平手时略偏向**开始**以稳定输出。
+
+    当 ``favor_s_for_first_merged`` 为真且**整段第一簇**同时含 S/T 两路峰时，**约定首标为「开始」**，
+    取 ``start`` 路中 ``rs`` 最大者，避免 crosstalk 在停上略高时把首记判成停（与 231204 类素材一致）。
+
+    ``prefer_s_when_t_wins_by_less_than`` 非空时：若本应以 max(rt) 判为「停」但
+    ``max(rt)-max(rs)`` 小于该阈值，则改判为「开始」（远场/机身麦上停模板略胜、差值极小的错判）。
+
+    成对后仍是：每个**开始**配第一个**其后的结束** → 拆 [开始, 停] 片段，与播标流程一致。
+    """
+    if not p_s and not p_t:
+        return [], []
+    set_s = {int(i) for i in p_s}
+    set_t = {int(i) for i in p_t}
+    g = int(max(1, round(float(merge_sec) * float(sample_rate))))
+    idxs = sorted(set_s | set_t)
+    blocks: list[list[int]] = []
+    cur: list[int] = [idxs[0]]
+    for j in idxs[1:]:
+        if j - cur[-1] <= g:
+            cur.append(j)
+        else:
+            blocks.append(cur)
+            cur = [j]
+    blocks.append(cur)
+    out_s: list[int] = []
+    out_t: list[int] = []
+    for bi, b in enumerate(blocks):
+        bs = [i for i in b if i in set_s]
+        btt = [i for i in b if i in set_t]
+        if not btt:
+            k_star = max(bs, key=lambda k: float(rs[k]))
+            out_s.append(int(k_star))
+        elif not bs:
+            k_star = max(btt, key=lambda k: float(rt[k]))
+            out_t.append(int(k_star))
+        else:
+            if bool(favor_s_for_first_merged) and bi == 0 and bs and btt:
+                k_star = max(bs, key=lambda k: float(rs[k]))
+                out_s.append(int(k_star))
+                continue
+            best_s = max(float(rs[i]) for i in bs)
+            best_t = max(float(rt[j]) for j in btt)
+            margin_t_win = best_t - best_s
+            pm = prefer_s_when_t_wins_by_less_than
+            if best_s >= best_t:
+                k_star = max(bs, key=lambda k: float(rs[k]))
+                out_s.append(int(k_star))
+            elif (
+                pm is not None
+                and float(pm) > 0.0
+                and margin_t_win < float(pm)
+            ):
+                k_star = max(bs, key=lambda k: float(rs[k]))
+                out_s.append(int(k_star))
+            else:
+                k_star = max(btt, key=lambda k: float(rt[j]))
+                out_t.append(int(k_star))
+    return sorted(out_s), sorted(out_t)
+
+
 def _indices_to_sec(indices: list[int], sample_rate: int, template_len: int) -> list[float]:
     # 互相关 argmax 对应**模板首样本**在 x 中的对齐下标
     return [i / float(sample_rate) for i in indices]
@@ -126,8 +203,23 @@ def detect_marker_times(
             raise ValueError("需要单声道一维数组")
     rs = _sliding_norm_xcorr(x, template_start)
     rt = _sliding_norm_xcorr(x, template_stop)
-    p_s = _find_peaks(rs, sample_rate, snr_cap=snr_cap)
-    p_t = _find_peaks(rt, sample_rate, snr_cap=snr_cap)
+    p_s0 = _find_peaks(rs, sample_rate, snr_cap=snr_cap)
+    p_t0 = _find_peaks(rt, sample_rate, snr_cap=snr_cap)
+    merge = float(
+        getattr(config, "CROSS_CROSSTALK_MERGE_SEC", 0.06) or 0.06
+    )
+    favor = bool(getattr(config, "FAVOR_S_FOR_FIRST_MERGED_CLUSTER", True))
+    prefer_margin = getattr(config, "PREFER_S_WHEN_T_WINS_BUT_MARGIN_BELOW", None)
+    p_s, p_t = _merge_opposing_peaks_to_one_label(
+        rs,
+        rt,
+        p_s0,
+        p_t0,
+        sample_rate,
+        merge,
+        favor_s_for_first_merged=favor,
+        prefer_s_when_t_wins_by_less_than=prefer_margin,
+    )
     t_s = _indices_to_sec(p_s, sample_rate, template_start.size)
     t_t = _indices_to_sec(p_t, sample_rate, template_stop.size)
     return {

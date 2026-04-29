@@ -2,6 +2,19 @@
 
 > 本文档提供完整的数据筛选操作步骤，可直接复制命令执行。
 
+## 采集视频：双 chirp 标定切分（固定流程）
+
+若原始长录像是用 **A/C 播标定 chirp**（非口语 ASR）并需按「开始→停」切成多段 MP4，**不要**走本页下方「轨迹异常」那一套；请按仓库内固定流程执行：
+
+- **权威说明**：[umi_scripts_csw/nano_sync_freq/FREQ_WORKFLOW.md](../umi_scripts_csw/nano_sync_freq/FREQ_WORKFLOW.md)（`build_assets` → 采集 `pedal_freq_listener` → `segment_by_freq_markers.py` 写 `markers.json` + `clip_*.mp4`）
+- **快速命令**（在 `umi_scripts_csw` 下）：
+
+```bash
+python3 nano_sync_freq/build_assets.py
+python3 nano_sync_freq/segment_by_freq_markers.py /path/to/record.mp4 \
+  --cut-dir ./out_freq_clips --markers-out ./out_freq_clips/markers.json
+```
+
 ## 环境准备
 
 ### 1. 克隆代码仓库
