@@ -9,8 +9,7 @@
 2)（macOS）抽轨后用扬声器试听中间 WAV
    python umi_scripts_csw/play_video_check_audio.py <video> --afplay
 
-nano 长录后如需按「开始录制 / 停止录制」做句级切分，见 README「nano_sync」与
-``nano_sync/segment_by_record_markers.py``（百炼 filetrans + 公网 ``--file-url``）。
+要验证长录 MP4 的音轨或抽 WAV，用本目录下 **play_video_check_audio.py**（见该脚本 `python … --help`）。按 **chirp 标定** 做切段见 **nano_sync_freq** 与 **FREQ_WORKFLOW.md**。
 
 仅播放画面（不播放系统音频）时：
   python umi_scripts_csw/play_video_check_audio.py <video>
