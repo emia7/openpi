@@ -12,6 +12,8 @@
 | data_cleaning/check_trajectory_anomalies.py | **轨迹异常检测** (完整分析) | MP4+JSON目录 | trajectory_anomaly_report.json | numpy |
 | data_cleaning/generate_visual_report.py | **可视化报告生成** | anomaly_report.json | HTML/Markdown报告 | 无额外依赖 |
 | data_cleaning/execute_data_cleaning.py | **执行数据清理** (删+重编号) | 数据目录 + anomaly报告 | cleaned/目录 | shutil |
+| data_cleaning/replace_third_with_nano_0429.py | **0429 第三视角换 DJI nano**：10Hz 最近帧采样 + 前缀 N 帧对齐 left；删 alignment png | handover_umi_0429 + `out_freq_dji0429_recut` | `handover_umi_0429_nano`、`mapping.json` | imageio, numpy, tqdm |
+| data_cleaning/swap_left_right_dataset.py | **互换 left/right**：mp4/states/png 重命名链 + JSON 内容对调并修正 `view` | MP4+JSON 目录；可选 episode 编号区间 | `swap_left_right_log.json` | tqdm |
 | data_cleaning/clean_data_0422_preview.py | 清理预览 (旧版，仅供参考) | MP4+JSON目录 | cleaning_report.json | numpy, imageio |
 | data_conversion/convert_mp4_data_to_lerobot_123_aruco.py | **主转换脚本** (ArUco版) | MP4+JSON (stage1) | LeRobot数据集 | lerobot, imageio |
 

@@ -1,6 +1,7 @@
 /* global document, window, URL, fetch, FileReader, Blob, URLSearchParams */
 /**
- * 标定时间轴：系统参考层 + 可编辑起停、HTML5 视频、快捷键 a/c、Space 播停、导出 JSON。
+ * 标定时间轴：系统参考层 + 可编辑起停、HTML5 视频；快捷键 a/c、e、Space；
+ * ⌘/Ctrl+Z 撤销、⇧+⌘/Ctrl+Z 重做（输入框内交给浏览器）；导出 JSON。
  */
 (function () {
   "use strict";
@@ -37,6 +38,51 @@
   let viewEnd = 0;
   /** @type {{ pointerId: number, x0: number, v0: number, e0: number, moved: boolean } | null} */
   let railDrag = null;
+  /** 时间轴上最后一次点击的可编辑竖线，用于 <kbd>e</kbd> 起停互换 */
+  let pickMarker = null;
+
+  const MAX_UNDO = 120;
+  /** @type {{ userS: number[], userT: number[] }[]} */
+  let undoStack = [];
+  /** @type {{ userS: number[], userT: number[] }[]} */
+  let redoStack = [];
+
+  function snapshotState() {
+    return { userS: userS.slice(), userT: userT.slice() };
+  }
+
+  function applyState(s) {
+    userS = s.userS.slice();
+    userT = s.userT.slice();
+    pickMarker = null;
+    renderTableS();
+    renderTableT();
+    redrawTimeline();
+  }
+
+  function recordBeforeChange() {
+    undoStack.push(snapshotState());
+    if (undoStack.length > MAX_UNDO) {
+      undoStack.shift();
+    }
+    redoStack = [];
+  }
+
+  function undoOnce() {
+    if (undoStack.length === 0) {
+      return;
+    }
+    redoStack.push(snapshotState());
+    applyState(undoStack.pop());
+  }
+
+  function redoOnce() {
+    if (redoStack.length === 0) {
+      return;
+    }
+    undoStack.push(snapshotState());
+    applyState(redoStack.pop());
+  }
 
   const MIN_VIEW_SPAN = 0.25;
   const ZOOM_FACTOR = 1.28;
@@ -310,15 +356,90 @@
       userT: "可编辑·停",
     };
     const lab = labelMap[className] || "";
-    for (const t of times) {
+    for (let idx = 0; idx < times.length; idx += 1) {
+      const t = times[idx];
       if (t == null || Number.isNaN(t)) continue;
       if (t < viewStart - 1e-9 || t > viewEnd + 1e-9) continue;
       const d = document.createElement("div");
       d.className = "mk " + className;
+      if (className === "userS" || className === "userT") {
+        d.dataset.k = className === "userS" ? "s" : "t";
+        d.dataset.idx = String(idx);
+        if (
+          pickMarker &&
+          pickMarker.k === d.dataset.k &&
+          pickMarker.idx === idx
+        ) {
+          d.classList.add("mk--pick");
+        }
+        d.title =
+          (lab ? lab + " " : "") +
+          t.toFixed(3) +
+          "s — 点击选中后按 e 与配对起/停互换";
+      } else {
+        d.title = (lab ? lab + " " : "") + t.toFixed(3) + "s";
+      }
       d.style.left = timeToPctInView(t) + "%";
-      d.title = (lab ? lab + " " : "") + t.toFixed(3) + "s";
       layer.appendChild(d);
     }
+  }
+
+  /**
+   * 与 segment 一致的贪心成对：返回 start 表下标 -> stop 表下标（仅已配对的起）。
+   */
+  function greedyStartToStopIndex() {
+    const s = userS
+      .map((v, i) => ({ v: Number(v), i }))
+      .sort((a, b) => a.v - b.v || a.i - b.i);
+    const t = userT
+      .map((v, i) => ({ v: Number(v), i }))
+      .sort((a, b) => a.v - b.v || a.i - b.i);
+    let j = 0;
+    const startToStop = new Map();
+    for (const { v: ts, i: si } of s) {
+      while (j < t.length && t[j].v <= ts + 1e-9) {
+        j += 1;
+      }
+      if (j >= t.length) {
+        continue;
+      }
+      startToStop.set(si, t[j].i);
+      j += 1;
+    }
+    return startToStop;
+  }
+
+  /** 选中的起/停与贪心配对的那一侧互换数值（不自动排序，便于继续改） */
+  function swapPairedPick() {
+    if (!pickMarker) {
+      return false;
+    }
+    const map = greedyStartToStopIndex();
+    if (pickMarker.k === "s") {
+      const si = pickMarker.idx;
+      const tj = map.get(si);
+      if (tj === undefined) {
+        return false;
+      }
+      const a = userS[si];
+      userS[si] = userT[tj];
+      userT[tj] = a;
+      return true;
+    }
+    const ti = pickMarker.idx;
+    let siFound = -1;
+    map.forEach(function (tj, si) {
+      if (tj === ti) {
+        siFound = si;
+      }
+    });
+    if (siFound < 0) {
+      return false;
+    }
+    const a = userT[ti];
+    userT[ti] = userS[siFound];
+    userS[siFound] = a;
+    return true;
   }
 
   function drawPreviewClips(clips) {
@@ -488,6 +609,8 @@
     renderTableS();
     renderTableT();
     renderManualTable();
+    undoStack = [];
+    redoStack = [];
   }
 
   function onMarkersFile(ev) {
@@ -533,6 +656,17 @@
     redrawTimeline();
   });
 
+  /** 表格单元格获得焦点时记一笔，便于一次撤销整段输入 */
+  function onTableCellFocusIn(e) {
+    const t = e.target;
+    if (!t.matches || !t.matches("input.tcell")) {
+      return;
+    }
+    recordBeforeChange();
+  }
+  tblS.addEventListener("focusin", onTableCellFocusIn);
+  tblT.addEventListener("focusin", onTableCellFocusIn);
+
   function onCellInput(e) {
     const t = e.target;
     if (!t.matches || !t.matches("input.tcell")) return;
@@ -561,6 +695,7 @@
   });
   tblS.addEventListener("click", function (e) {
     if (e.target && e.target.dataset && e.target.dataset.act === "delS") {
+      recordBeforeChange();
       const i = parseInt(e.target.dataset.i, 10);
       applyTableFromInputs();
       if (i >= 0 && i < userS.length) userS.splice(i, 1);
@@ -579,6 +714,7 @@
   });
   tblT.addEventListener("click", function (e) {
     if (e.target && e.target.dataset && e.target.dataset.act === "delT") {
+      recordBeforeChange();
       const i = parseInt(e.target.dataset.i, 10);
       applyTableFromInputs();
       if (i >= 0 && i < userT.length) userT.splice(i, 1);
@@ -589,24 +725,28 @@
   });
 
   document.getElementById("btnAddS").addEventListener("click", function () {
+    recordBeforeChange();
     userS.push(v.currentTime || 0);
     userS.sort(sortNum);
     renderTableS();
     redrawTimeline();
   });
   document.getElementById("btnAddT").addEventListener("click", function () {
+    recordBeforeChange();
     userT.push(v.currentTime || 0);
     userT.sort(sortNum);
     renderTableT();
     redrawTimeline();
   });
   document.getElementById("btnSortS").addEventListener("click", function () {
+    recordBeforeChange();
     applyTableFromInputs();
     userS.sort(sortNum);
     renderTableS();
     redrawTimeline();
   });
   document.getElementById("btnSortT").addEventListener("click", function () {
+    recordBeforeChange();
     applyTableFromInputs();
     userT.sort(sortNum);
     renderTableT();
@@ -652,6 +792,20 @@
   window.addEventListener("keydown", function (e) {
     if (typingFocus()) return;
     const k = e.key;
+    if ((e.metaKey || e.ctrlKey) && (k === "z" || k === "Z")) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        redoOnce();
+      } else {
+        undoOnce();
+      }
+      return;
+    }
+    if (e.ctrlKey && !e.metaKey && (k === "y" || k === "Y")) {
+      e.preventDefault();
+      redoOnce();
+      return;
+    }
     if (k === " " || k === "Spacebar") {
       e.preventDefault();
       if (v.paused) v.play();
@@ -660,6 +814,7 @@
     }
     if (k === "a" || k === "A") {
       e.preventDefault();
+      recordBeforeChange();
       userS.push(v.currentTime || 0);
       userS.sort(sortNum);
       renderTableS();
@@ -668,15 +823,45 @@
     }
     if (k === "c" || k === "C") {
       e.preventDefault();
+      recordBeforeChange();
       userT.push(v.currentTime || 0);
       userT.sort(sortNum);
       renderTableT();
       redrawTimeline();
+      return;
+    }
+    if (k === "e" || k === "E") {
+      e.preventDefault();
+      if (!pickMarker) {
+        return;
+      }
+      recordBeforeChange();
+      if (!swapPairedPick()) {
+        undoStack.pop();
+      } else {
+        renderTableS();
+        renderTableT();
+        redrawTimeline();
+      }
+      return;
     }
   }, true);
 
   rail.addEventListener("pointerdown", function (e) {
     if (e.button !== 0) return;
+    const mk = e.target.closest(
+      ".layer.user .mk.userS, .layer.user .mk.userT"
+    );
+    if (mk && mk.dataset && mk.dataset.k !== undefined && mk.dataset.idx !== undefined) {
+      pickMarker = {
+        k: mk.dataset.k,
+        idx: parseInt(mk.dataset.idx, 10),
+      };
+      redrawTimeline();
+      return;
+    }
+    pickMarker = null;
+    redrawTimeline();
     try {
       rail.setPointerCapture(e.pointerId);
     } catch (_err) {
