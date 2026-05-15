@@ -5,6 +5,13 @@ data/
 wandb/
 eval_results/
 compare_npz_out/
+graduation_paper/
+anomaly_reports/
+anomaly_reports_freq/
+anomaly_reports_handover_mix/
+anomaly_reports_0429/
+anomaly_reports_0429_nano/
+anomaly_reports_0430/
 
 # representation_analysis: generated PNG/npy/json runs (keep scripts only in git)
 umi_scripts_csw/representation_analysis/analysis_results/*
