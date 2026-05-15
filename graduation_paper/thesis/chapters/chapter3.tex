@@ -1,0 +1,257 @@
+% 第3章 硬件系统与数据采集
+\section{硬件系统与数据采集}
+
+\subsection{引言：长程任务的视角需求}
+
+在双臂机器人操作中，长程任务（如双手交接物品、跨桌面协作）需要操作者对环境全局有充分感知。然而，传统无本体采集方案仅依赖腕部相机，只能捕捉手部附近的局部视野，难以满足长程任务的全局视野需求。本章针对"长程任务需求与采集设备头部视角缺失的矛盾"，系统介绍了第三视角相机的选型探索、多传感器数据同步方案以及系统实现。
+
+\subsection{第三视角相机选型}
+
+\subsubsection{为什么需要第三视角}
+
+腕部相机虽然能够捕捉精细的手部操作，但存在以下局限：
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{视野局限}：仅能看到手部附近区域，无法感知双臂相对位置和全局环境
+    \item \textbf{长程任务困难}：在handover等需要双手协调的任务中，腕部相机无法同时观察两只手
+    \item \textbf{空间推理缺失}：策略难以建立全局空间地图，影响复杂操作规划
+\end{itemize}
+
+第三视角相机提供了全局视野，使策略能够观察双臂协作过程、物体位置和操作空间布局，是解决长程任务视角需求的关键。
+
+\subsubsection{候选方案评估}
+
+我们对四种第三视角方案进行了系统评估，评估维度包括FOV覆盖率、视野稳定性、舒适度和同步便利性。
+
+\begin{table}[htbp]
+\centering
+\caption{第三视角相机选型对比}
+\label{tab:camera_comparison}
+\begin{tabular}{lccccc}
+\toprule
+方案 & FOV & 稳定性 & 舒适度 & 同步 & 综合评分 \\
+\midrule
+D435固定（胸口/固定） & 4/5 & 5/5 & N/A & 5/5 & \textbf{4.7/5} \\
+DJI Nano头戴 & 5/5 & 4/5 & 5/5 & 2/5 & 4.0/5 \\
+Lumos头戴 & 5/5 & 4/5 & 3/5 & 4/5 & 4.0/5 \\
+ZED头戴 & 4/5 & 3/5 & 2/5 & 4/5 & 3.3/5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{D435固定方案}（主线方案）：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{优势}：ROS同步成熟可靠、视角稳定无抖动、部署便利、技术文档完善
+    \item \textbf{部署方式}：固定在三脚架上，放置于操作台前方，高度约1.2-1.5米
+    \item \textbf{局限}：佩戴位置固定，无法跟随头部视角；视角范围受固定位置限制
+    \item \textbf{适用场景}：需要稳定全局视野的固定场景任务，如桌面操作、货架整理
+\end{itemize}
+
+\textbf{DJI Nano头戴方案}（创新探索）：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{优势}：
+    \begin{itemize}
+        \item 轻便舒适（仅50g，远轻于Lumos的200g+）
+        \item FOV覆盖率5/5，广角镜头覆盖双臂活动范围
+        \item 有配套头戴支架，佩戴几乎无感
+        \item 无线录制，无需布线，操作者活动自由
+    \end{itemize}
+    \item \textbf{挑战}：同步问题（最初是主要瓶颈，需要外部事件触发）
+    \item \textbf{解决}：开发了双音chirp标定同步方案（详见3.2.2节）
+    \item \textbf{数据量}：40分钟录制约13GB，可接受
+    \item \textbf{适用场景}：需要跟随视角的移动场景，或操作者需要频繁移动的任务
+\end{itemize}
+
+\textbf{Lumos头戴方案}（备选）：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{优势}：鱼眼180度FOV，视野拉满；稳定性较高
+    \item \textbf{局限}：相机较重（约200g），长时间佩戴疲劳；数据传输冗余大，带宽要求高
+    \item \textbf{综合评价}：视野优秀，但重量和带宽是硬伤
+\end{itemize}
+
+\textbf{ZED头戴方案}（放弃）：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{问题}：无配套头戴支架，需要DIY固定；相机本身较重，头部佩戴负担大
+    \item \textbf{综合评价}：重量和体积导致佩戴体验差，不适合头戴场景
+\end{itemize}
+
+\subsubsection{方案选择与应用}
+
+最终我们采用\textbf{双线并进}策略：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{D435固定}作为主线方案，用于大多数固定场景采集（如拿放杯子、上货任务）
+    \item \textbf{DJI Nano头戴}作为创新方案，同步问题已解决，可用于特殊场景或需要跟随视角的任务
+\end{itemize}
+
+这种双方案设计为无本体采集提供了灵活性和可靠性保障。
+
+\subsection{多传感器数据同步}
+
+时间同步是确保数据可用性的关键环节。我们针对D435固定方案和Nano头戴方案分别设计了同步方案。
+
+\subsubsection{D435 ROS时间同步}
+
+D435相机\cite{intel2018realsense}原生支持ROS\cite{quigley2009ros,koubaa2016ros}，采用硬件时间戳实现精确同步。
+
+\textbf{技术实现}：
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{硬件时间戳}：D435和FastUMI/XV设备在同一ROS网络中，使用统一系统时钟
+    \item \textbf{时间对齐}：以较短时间序列为基准，对较长序列进行线性插值
+    \item \textbf{误差控制}：确保左右臂每一帧时间戳差异小于33ms（对应30fps帧间隔）
+    \item \textbf{异常标记}：超过阈值的片段标记为同步异常，参与后续筛选
+\end{enumerate}
+
+\textbf{同步精度}：实测平均误差约15ms，满足双臂协调任务要求。
+
+\textbf{实现细节}：
+\begin{itemize}[leftmargin=2em]
+    \item ROS网络配置：所有设备连接同一WiFi或有线网络
+    \item 时间同步服务：使用NTP或chrony确保系统时钟一致
+    \item 数据录制：使用rosbag record同时录制所有topic
+    \item 后期处理：rosbag解析时提取时间戳，进行对齐验证
+\end{itemize}
+
+\subsubsection{Nano头戴相机同步探索}
+
+针对DJI Nano无线录制场景，传统ROS同步不适用，我们开发了\textbf{双音chirp标定同步方案}。
+
+\textbf{问题背景}：
+\begin{itemize}[leftmargin=2em]
+    \item Nano无线录制，无法通过ROS获取时间戳
+    \item 需要与主系统（FastUMI/XV）精确对齐
+    \item 后期手动对齐费时费力且准确性低
+    \item 早期尝试使用语音识别（ASR）进行对齐，但ASR在静音片段和重叠语音上表现不佳
+\end{itemize}
+
+\textbf{解决方案：双音chirp标定法}：
+
+采用两种可区分的高频短音标记开始/结束\cite{oppenheim1999discrete,rabiner1975chirp}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{开始音（Start）}：上调频chirp，2.2kHz $\rightarrow$ 4.4kHz，时长0.12秒
+    \item \textbf{结束音（Stop）}：下调频chirp，4.5kHz $\rightarrow$ 2.2kHz，时长0.12秒
+    \item \textbf{采样率}：48kHz（与视频录音一致）
+    \item \textbf{频率选择}：选择2-5kHz范围，避开常见环境噪声频段，同时低于8kHz的语音截止频率
+\end{itemize}
+
+\textbf{检测算法}：
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{信号检测}：FFT归一化互相关（NCC）检测chirp信号
+    \item \textbf{时间戳提取}：从音轨中提取精确的Start/Stop时间点
+    \item \textbf{成对配对}：贪心算法将Start和Stop配对，期望起-停-起-停交替模式
+    \item \textbf{误差容差}：$\pm$0.5秒内配对，支持未配对标记再扫描
+\end{enumerate}
+
+\textbf{技术细节}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{FFT长度}：使用1024点FFT，频率分辨率约47Hz（48kHz采样率）
+    \item \textbf{检测阈值}：NCC峰值超过0.8认为检测到有效信号
+    \item \textbf{后处理流程}：抽音轨 $\rightarrow$ 模板检测（FFT互相关）$\rightarrow$ 成对配对 $\rightarrow$ ffmpeg切片
+\end{itemize}
+
+\textbf{同步精度}：实测误差$<$33ms，满足双臂协调要求。
+
+\textbf{方案优势}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{不依赖ASR}：完全绕过语音识别，避免语义模型弱点
+    \item \textbf{物理波形定位}：时间戳由物理波形产生，比口语字级更稳定、可复现
+    \item \textbf{实时轻量}：播标与检标共用同一份参考WAV，便于互相关匹配
+    \item \textbf{可人工复核}：提供浏览器标注工具，支持人工调整和确认
+\end{itemize}
+
+这一方案创新性地解决了头戴相机同步难题，为无线录制场景提供了可靠的时间对齐方法。
+
+\subsection{系统实现与性能}
+
+\subsubsection{端到端数据流程}
+
+系统涵盖从数据采集到策略部署的完整流程，共四个阶段：
+
+\textbf{阶段一：数据采集}：
+\begin{itemize}[leftmargin=2em]
+    \item 启动ROS节点（XV SDK或Franka控制器）
+    \item 启动FastUMI/XV采集监控工具
+    \item 启动第三视角相机（D435或Nano）
+    \item 使用rosbag record录制数据
+    \item 每条轨迹录制6-10秒，对应30-60帧（60Hz采样，目标10Hz）
+\end{itemize}
+
+\textbf{阶段二：本地处理}：
+\begin{itemize}[leftmargin=2em]
+    \item 将rosbag转换为mp4+json格式（视频压缩+轨迹提取）
+    \item 可视化检查每条轨迹，剔除明显异常数据
+    \item 对数据进行排序和重新编号
+    \item 压缩数据并上传到服务器
+\end{itemize}
+
+\textbf{阶段三：服务器处理}：
+\begin{itemize}[leftmargin=2em]
+    \item 解压数据并转换为LeRobot格式
+    \item 计算归一化统计量（mean, std, q01, q99）
+    \item 降采样至目标帧率（10Hz）
+    \item 数据筛选（应用10条CHECK规则）
+    \item 合并多批次数据并采样（100/200/400条等配置）
+\end{itemize}
+
+\textbf{阶段四：训练与部署}：
+\begin{itemize}[leftmargin=2em]
+    \item 基于π0.5模型微调（20,000步，约11-13小时）
+    \item 模型权重下载到本地4090台式机
+    \item 启动策略服务（WebSocket服务）
+    \item 机械臂执行评测
+\end{itemize}
+
+\subsubsection{系统性能指标}
+
+\begin{table}[htbp]
+\centering
+\caption{系统性能指标}
+\label{tab:system_performance}
+\begin{tabular}{lcc}
+\toprule
+指标 & 数值 & 说明 \\
+\midrule
+单条数据处理时间 & 约2-3分钟 & rosbag到LeRobot（本地） \\
+服务器处理时间 & 约5-10分钟 & 解压+格式转换+归一化 \\
+每小时数据存储量 & 约13GB（含视频） & 双臂+第三视角 \\
+数据压缩比 & 约10:1 & rosbag到mp4 \\
+同步精度（D435） & $<$33ms & ROS时间戳 \\
+同步精度（Nano） & $<$33ms & chirp标定 \\
+单模型训练时间 & 11-13小时 & 20k步，batch=16 \\
+模型推理速度 & 10-15fps & 实时控制 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{关键问题与解决}
+
+\textbf{问题一：数据采集过热}
+\begin{itemize}[leftmargin=2em]
+    \item 现象：采集设备过热导致帧率下降，6秒视频只有70+帧（正常应有360帧）
+    \item 解决：增加散热措施，控制单次采集时长，设备冷却后再次采集
+\end{itemize}
+
+\textbf{问题二：初始位置固定}
+\begin{itemize}[leftmargin=2em]
+    \item 现象：无本体采集每次初始位置可能不同，导致策略泛化困难
+    \item 解决：使用脚踏板固定操作者位置，确保每次采集初始位置一致
+\end{itemize}
+
+\textbf{问题三：数据分布差异}
+\begin{itemize}[leftmargin=2em]
+    \item 现象：不同采集者操作速度和风格不同（位移步长差1.43倍，旋转步长差2.2倍）
+    \item 解决：统一采集规范，增加数据多样性，后续通过数据筛选剔除异常分布数据
+\end{itemize}
+
+\subsubsection{对比平台}
+
+为验证无本体方案的有效性，我们同时构建了\textbf{Franka遥操平台}作为对比基线。该平台采用Gello框架实现双臂遥操作，硬件配置包括：
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{机械臂}：Franka Panda双臂（7DOF+7DOF）
+    \item \textbf{夹爪}：Robotiq 2F-85（遥操）/ UMI夹爪（无本体）
+    \item \textbf{相机}：腕部鱼眼相机（遥操）/ 手持设备相机（无本体）
+    \item \textbf{第三视角}：D435固定位置相机（两者共用）
+\end{itemize}
+
+该平台用于第6章的跨平台对比实验，验证无本体数据与遥操数据的性能差异。
+

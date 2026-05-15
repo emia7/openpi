@@ -1,0 +1,38 @@
+% 跨平台对比柱状图 - TikZ版本
+\begin{tikzpicture}[scale=0.85]
+    % 柱状图数据
+    \def\barwidth{1.2}
+    \def\spacing{2.5}
+    
+    % 第一个柱子 - FastUMI
+    \fill[blue!60] (0,0) rectangle (\barwidth, 4.5);
+    \draw[black, thick] (0,0) rectangle (\barwidth, 4.5);
+    \node[white, font=\bfseries] at (\barwidth/2, 2.25) {90\%};
+    \node[below, font=\small, text width=1.5cm, align=center] at (\barwidth/2, -0.2) {FastUMI\\(本文方案)};
+    
+    % 第二个柱子 - XV
+    \fill[purple!60] (\spacing,0) rectangle (\spacing+\barwidth, 4.375);
+    \draw[black, thick] (\spacing,0) rectangle (\spacing+\barwidth, 4.375);
+    \node[white, font=\bfseries] at (\spacing+\barwidth/2, 2.1875) {87.5\%};
+    \node[below, font=\small, text width=1.5cm, align=center] at (\spacing+\barwidth/2, -0.2) {XV单臂\\(跨硬件)};
+    
+    % 第三个柱子 - Franka
+    \fill[orange!70] (2*\spacing,0) rectangle (2*\spacing+\barwidth, 5);
+    \draw[black, thick] (2*\spacing,0) rectangle (2*\spacing+\barwidth, 5);
+    \node[white, font=\bfseries] at (2*\spacing+\barwidth/2, 2.5) {100\%};
+    \node[below, font=\small, text width=1.5cm, align=center] at (2*\spacing+\barwidth/2, -0.2) {Franka\\(遥操基线)};
+    
+    % Y轴
+    \draw[->, thick] (-0.5,0) -- (-0.5,6);
+    \foreach \y/\label in {0/0, 1/20, 2/40, 3/60, 4/80, 5/100}
+        \draw (-0.6,\y) -- (-0.4,\y) node[left, font=\small] {\label};
+    \node[rotate=90, font=\small] at (-1.2, 3) {成功率 (\%)};
+    
+    % 标题
+    \node[font=\bfseries] at (2.5, 6.5) {不同采集平台的性能比较};
+    \node[font=\small] at (2.5, 6) {(Pick-Place任务)};
+    
+    % 说明
+    \draw[->, thick, blue!70!black] (5.5, 3) -- (6.5, 3.5);
+    \node[right, font=\scriptsize, text width=3cm] at (6.5, 3.25) {无本体方案90\%，\\接近遥操100\%};
+\end{tikzpicture}

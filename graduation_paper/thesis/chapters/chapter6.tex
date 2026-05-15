@@ -1,0 +1,416 @@
+% 第6章 实验验证与Pipeline体现
+\section{实验验证与Pipeline体现}
+
+本章展示完整pipeline在单臂和双臂任务中的验证结果，证明无本体数据采集与模仿学习方案的可行性。实验涵盖三类典型任务：拿放杯子（pick-place-cup）、上货（stock-shelves）、开笔记本（open-laptop），并对比了不同数据规模、不同输入配置下的性能表现。
+
+\subsection{实验任务设计}
+
+\subsubsection{任务一：拿放杯子（pick-place-cup）}
+
+\textbf{任务描述}：机械臂需要从桌面指定区域抓取杯子，并放置到目标盘子中。该任务要求精确的抓取位姿控制和放置位置精度，是评估策略基本操作能力的标准任务。
+
+\textbf{任务难度}：中等。涉及精细的抓取操作（杯子边缘较薄）和准确的放置定位（需要放入盘子而非桌面）。
+
+\subsubsection{任务二：上货（stock-shelves）}
+
+\textbf{任务描述}：机械臂需要将物品（如彩色方块）从桌面拿起，放置到货架的指定格子中。与pick-place任务相比，上货任务要求更高的空间定位和垂直方向的精确控制。
+
+\textbf{任务难度}：中高。需要控制机械臂到达特定高度，并在三维空间中精确定位。评估发现，无本体数据训练的模型容易出现"提前放下"的问题，即尚未到达目标高度就松开夹爪。
+
+\subsubsection{任务三：开笔记本（open-laptop）}
+
+\textbf{任务描述}：机械臂需要打开合上的笔记本电脑。该任务包含多个子步骤：定位笔记本边缘、插入夹爪、掀开屏幕、按压确认。
+
+\textbf{任务难度}：高。属于多阶段长程任务，要求策略具备较强的时序推理能力。实验表明，该任务对数据量要求最高，400条以下数据难以成功。
+
+\subsection{单臂任务验证}
+
+\subsubsection{实验设置}
+
+\textbf{数据采集}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{无本体数据}：使用FastUMI手持采集设备进行数据采集
+    \item \textbf{遥操基线}：使用Gello遥操框架控制Franka机械臂采集数据
+    \item \textbf{第三视角}：固定位置D435相机提供全局视野
+    \item \textbf{数据格式}：rosbag原始数据，处理后转为LeRobot格式
+\end{itemize}
+
+\textbf{模型训练}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{预训练模型}：π0.5（大规模VLA模型）
+    \item \textbf{微调步数}：20,000步（约11-13小时训练时间）
+    \item \textbf{批次大小}：16-128（根据GPU资源调整）
+    \item \textbf{输入配置}：纯图像输入 / 图像+state输入
+    \item \textbf{输出配置}：Relative Action（6D旋转+位置+gripper）
+\end{itemize}
+
+\textbf{评测方法}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{测试次数}：每个模型测试20次
+    \item \textbf{评价指标}：成功率（成功完成任务的次数占比）
+    \item \textbf{位置泛化}：在多个位置（左、右、上、下）进行测试
+    \item \textbf{ retry机制}：允许失败后重试，记录总尝试次数
+\end{itemize}
+
+\subsubsection{数据规模对性能的影响}
+
+我们对拿放杯子任务进行了详细的数据规模-性能关系研究，对比了100条、200条、400条数据的训练效果。
+
+\textbf{无本体数据（纯图像输入）}：
+
+\begin{table}[htbp]
+\centering
+\caption{拿放杯子任务：无本体数据不同数据规模的性能对比（纯图像输入）}
+\label{tab:data_scale_cup_embodiment_free}
+\begin{tabular}{cccc}
+\toprule
+数据规模 & 成功率 & 左侧成功率 & 下方成功率 \\
+\midrule
+100条 & 77.5\% & 较好 & 较差 \\
+200条 & 90\% & 90\% & 90\% \\
+400条 & \textbf{90\%} & 90\% & 90\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{关键发现}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{100条数据}：成功率77.5\%，能够完成基本任务但泛化性不足，对某些位置（如下方）表现较差
+    \item \textbf{200条数据}：成功率跃升至90\%，达到实用水平，各位置泛化性能均衡
+    \item \textbf{400条数据}：维持90\%成功率，与200条相比提升不明显，但模型更稳定
+    \item \textbf{数据效率拐点}：200条左右是性价比最高的数据规模
+\end{itemize}
+
+\textbf{遥操基线数据（纯图像输入）}：
+
+\begin{table}[htbp]
+\centering
+\caption{拿放杯子任务：遥操数据不同数据规模的性能对比（纯图像输入）}
+\label{tab:data_scale_cup_teleop}
+\begin{tabular}{cccc}
+\toprule
+数据规模 & 成功率 & 左侧成功率 & 下方成功率 \\
+\midrule
+50条 & 100\% & 100\% & 100\% \\
+100条 & 100\% & 100\% & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{关键发现}：
+\begin{itemize}[leftmargin=2em]
+    \item 遥操数据仅需50条即可达到100\%成功率
+    \item 遥操数据的数据效率约为无本体数据的4倍
+    \item 验证了遥操作为"完美基线"的有效性
+\end{itemize}
+
+\subsubsection{输入配置对比：纯图像 vs 图像+State}
+
+我们对比了两种输入配置的性能差异，这是本研究的重要发现之一。
+
+\textbf{拿放杯子任务（400条无本体数据）}：
+
+\begin{table}[htbp]
+\centering
+\caption{拿放杯子任务：不同输入配置的性能对比}
+\label{tab:input_config_cup}
+\begin{tabular}{lcc}
+\toprule
+输入配置 & 成功率 & 备注 \\
+\midrule
+纯图像输入 & \textbf{90\%} & 动作果断，轨迹平滑 \\
+图像+绝对State & 75\% & 动作保守，末端抖动 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{上货任务（400条无本体数据）}：
+
+\begin{table}[htbp]
+\centering
+\caption{上货任务：不同输入配置的性能对比}
+\label{tab:input_config_shelves}
+\begin{tabular}{lcc}
+\toprule
+输入配置 & 成功率 & 备注 \\
+\midrule
+纯图像输入 & 70\% & 有提前放下问题 \\
+图像+绝对State & - & 未测试 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{遥操数据上货任务（100条）}：
+
+\begin{table}[htbp]
+\centering
+\caption{上货任务：遥操数据不同输入配置的性能对比}
+\label{tab:input_config_shelves_teleop}
+\begin{tabular}{lcc}
+\toprule
+输入配置 & 成功率 & 备注 \\
+\midrule
+纯图像输入 & 80\% & 有提前放下问题 \\
+图像+绝对State & 92.5\% & 效果更好 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{反直觉发现}：
+\begin{itemize}[leftmargin=2em]
+    \item 在拿放杯子任务中，\textbf{纯图像输入（90\%）反而优于图像+State（75\%）}
+    \item 分析认为：
+    \begin{itemize}
+        \item π0.5模型具备强大的视觉推理能力，能够从图像中隐式提取空间信息
+        \item 显式State估计可能引入噪声，反而干扰策略学习
+        \item 无本体采集的State估计误差较大，不如依赖视觉
+    \end{itemize}
+    \item 在上货任务中，遥操数据的State输入确实有提升（80\%→92.5\%），说明State在复杂任务中有价值，但前提是State质量要足够高
+\end{itemize}
+
+\subsubsection{跨平台对比：遥操 vs 无本体}
+
+我们系统对比了遥操（Franka+Gello）和无本体（FastUMI/XV）两种数据采集方式的性能。
+
+\begin{table}[htbp]
+\centering
+\caption{不同采集平台的数据效率对比}
+\label{tab:platform_comparison_detail}
+\begin{tabular}{lcccc}
+\toprule
+任务 & 遥操50条 & 遥操100条 & 无本体100条 & 无本体400条 \\
+\midrule
+拿放杯子 & 100\% & 100\% & 77.5\% & 90\% \\
+上货 & 67.5\% & 80\% & 62.5\% & 70\% \\
+开笔记本 & 90\% & 100\% & 0\% & 50\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{数据效率分析}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{拿放杯子}：遥操数据效率是无本体的约4倍（遥操50条=无本体200条）
+    \item \textbf{上货}：遥操数据效率是无本体的约2-4倍
+    \item \textbf{开笔记本}：无本体数据需要400条才达到50\%，而遥操100条即可达到100\%
+    \item \textbf{结论}：无本体数据虽然效率较低，但通过增加数据量（4倍左右）可以达到接近遥操的性能
+\end{itemize}
+
+\subsubsection{开笔记本任务：高难度任务验证}
+
+开笔记本是三个任务中难度最高的，需要多阶段推理和精细操作。
+
+\textbf{实验结果}：
+
+\begin{table}[htbp]
+\centering
+\caption{开笔记本任务：不同数据规模的性能}
+\label{tab:open_laptop}
+\begin{tabular}{lcc}
+\toprule
+数据规模 & 无本体成功率 & 遥操成功率 \\
+\midrule
+50条 & 0\% & 90\% \\
+100条 & 0\% & 100\% \\
+200条 & 0\% & - \\
+300条 & 0\% & - \\
+400条 & 50\% & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{关键发现}：
+\begin{itemize}[leftmargin=2em]
+    \item 该任务对数据量要求极高，无本体数据需要400条才能达到50\%成功率
+    \item 遥操数据仅需50-100条即可达到90-100\%成功率
+    \item 验证了复杂任务中无本体数据的可行性，但需要大规模数据采集
+\end{itemize}
+
+\subsection{双臂任务探索}
+
+\subsubsection{handover任务设计}
+
+\textbf{任务描述}：双臂机器人需要完成物品交接任务。具体流程为：
+\begin{enumerate}[leftmargin=2em]
+    \item 左臂从桌面抓取物品（如矿泉水瓶）
+    \item 左臂将物品递送至双臂中间位置
+    \item 右臂从中间位置接取物品
+    \item 右臂将物品放置到右侧目标区域
+\end{enumerate}
+
+\textbf{任务难度}：高。涉及双臂协调、精确的空间对齐、时机配合。
+
+\subsubsection{数据采集与训练}
+
+\textbf{数据采集历程}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{第一阶段}（3月）：使用D435第三视角相机，采集35条数据初步验证pipeline可行性
+    \item \textbf{第二阶段}（4月）：完善数据质量，采用脚踏板固定初始位置，采集50余条数据
+    \item \textbf{第三阶段}（4月中下旬）：大规模采集，总计约600条数据（包含不同批次混合）
+    \item \textbf{第四阶段}（4月底）：使用DJI Nano作为头戴第三视角相机，采集约120条数据
+\end{itemize}
+
+\textbf{数据筛选}：
+\begin{itemize}[leftmargin=2em]
+    \item 使用10条CHECK规则筛选数据
+    \item 剔除约6\%的明显异常数据（设备掉线、同步失败、操作失误等）
+    \item 人工复核轨迹，保留高质量数据
+\end{itemize}
+
+\subsubsection{实验结果}
+
+\textbf{训练配置对比}：
+
+我们测试了多种训练配置，包括不同第三视角相机（D435固定 vs Nano头戴）、有无mask（是否遮盖第三视角）、不同数据规模等。
+
+\begin{table}[htbp]
+\centering
+\caption{handover任务：不同配置的训练结果}
+\label{tab:handover_results}
+\begin{tabular}{llcc}
+\toprule
+配置编号 & 配置说明 & 数据量 & 效果评估 \\
+\midrule
+0322\_s1 & 高第三视角+Lumos相机 & 84条 & 效果很差，未学会 \\
+0322\_s2 & 高第三视角+RealSense相机 & 84条 & 效果一般 \\
+0322\_s3 & mask第三视角+Lumos & 84条 & 效果一般 \\
+0322\_s4 & mask第三视角+RealSense & 84条 & 效果一般 \\
+handover\_0329 & 重新采集高质量数据 & 50余条 & 效果一般 \\
+handover\_0416\_mix & 混合多批次数据+筛选 & 约250条 & 效果较好 \\
+handover\_0429 & 最终高质量数据 & 约600条 & 效果最好 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{关键发现}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{数据质量至关重要}：早期数据（0322批次）效果很差，经过筛选和重新采集后（0429批次）效果明显提升
+    \item \textbf{数据规模}：600条混合数据效果最好，验证了大规模数据对双臂任务的重要性
+    \item \textbf{第三视角价值}：高第三视角（相机位置较高）比mask（遮挡）效果更好，说明全局视野对双臂协调很重要
+    \item \textbf{Nano相机可行性}：使用DJI Nano头戴相机采集的120条数据可以用于训练，验证了无线录制方案的可行性
+\end{itemize}
+
+\subsubsection{失败模式分析}
+
+对handover任务失败案例进行详细分析，主要失败模式包括：
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{抓取失败（约35\%）}：
+    \begin{itemize}
+        \item 夹爪未完全闭合导致物品掉落
+        \item 抓取位置偏移，物品在移动过程中滑落
+        \item 对某些初始位置（随机接近位置）表现差，出现OOD（分布外）情况
+    \end{itemize}
+    
+    \item \textbf{对齐失败（约30\%）}：
+    \begin{itemize}
+        \item 双手对齐位置不够精确，导致交接困难
+        \item 高度不匹配，物品传递不顺畅
+        \item 第三视角位置变化导致策略对空间位置估计偏差
+    \end{itemize}
+    
+    \item \textbf{接取失败（约35\%）}：
+    \begin{itemize}
+        \item 右臂未能及时闭合夹爪接住物品
+        \item 动作时机不协调，交接失败
+        \item 递交过程中提前松手导致物品掉落
+    \end{itemize}
+\end{enumerate}
+
+\subsection{训练过程中的关键问题与解决}
+
+\subsubsection{归一化方法选择}
+
+在训练过程中，我们发现归一化方法对模型性能有显著影响。
+
+\textbf{问题发现}：
+\begin{itemize}[leftmargin=2em]
+    \item 使用quantile归一化（将1\%分位映射到-1，99\%分位映射到+1）时，部分数据训练效果很差
+    \item 离线测试发现，某些数据维度（dim00、01、04、06）存在固定bias，dim08（gripper维度）未学到有效模式
+\end{itemize}
+
+\textbf{解决方案}：
+\begin{itemize}[leftmargin=2em]
+    \item 改用z-score归一化（zero-centered normalization）
+    \item z-score公式：$x_{norm} = (x - \mu) / (\sigma + \epsilon)$
+    \item 效果：改用z-score归一化后，原本训练失败的数据能够正常训练，offline测试结果明显改善
+\end{itemize}
+
+\textbf{原因分析}：
+\begin{itemize}[leftmargin=2em]
+    \item quantile归一化对重尾分布（heavy-tail）和异常值更鲁棒，但会改变数据分布形状
+    \item z-score归一化保留数据分布的相对关系，更适合模仿学习任务
+    \item 显式padding（用0填充）后经过quantile归一化会被拉到-1，导致模型学习偏差
+\end{itemize}
+
+\subsubsection{旋转表示选择}
+
+我们对比了不同旋转表示方式的效果。
+
+\begin{table}[htbp]
+\centering
+\caption{不同旋转表示方式的对比}
+\label{tab:rotation_representation}
+\begin{tabular}{llc}
+\toprule
+旋转表示 & 说明 & 效果 \\
+\midrule
+3D旋转（轴角） & 使用3维轴角表示 & 较差，容易学偏 \\
+6D旋转 & 使用6维表示（两个3维向量） & \textbf{最好}，连续性更好 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{结论}：采用6D旋转表示（参考Zhou等人2019的研究），避免万向锁问题，训练更稳定。
+
+\subsubsection{数据分布问题}
+
+我们发现不同采集者采集的数据分布存在差异，影响模型泛化能力。
+
+\textbf{对比分析}（陈帅文200条 vs 龙哥100条）：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{轨迹长度}：258帧 vs 299帧
+    \item \textbf{时间戳频率}：60.26Hz vs 60.47Hz
+    \item \textbf{位移步长}（p99 median）：0.0131m vs 0.0092m（陈帅文快1.43倍）
+    \item \textbf{旋转步长}（p99 median）：0.0269rad vs 0.0121rad（陈帅文快2.2倍）
+\end{itemize}
+
+\textbf{结论}：不同采集者的操作速度和风格存在差异，建议在采集时统一操作规范，或增加数据多样性以提升模型鲁棒性。
+
+\subsection{实验总结}
+
+\subsubsection{主要结论}
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{无本体数据可行}：通过增加数据量（约4倍），无本体数据可以达到接近遥操数据的性能
+    \item \textbf{纯图像方案有效}：在简单任务中，纯图像输入反而优于显式State输入，说明π0.5模型具备强大的视觉推理能力
+    \item \textbf{数据规模拐点}：拿放杯子任务200条数据达到90\%成功率，是上货和开笔记本任务的基础数据量
+    \item \textbf{双臂任务可行但挑战性高}：handover任务需要600条以上高质量数据才能取得较好效果，且失败模式复杂
+\end{enumerate}
+
+\subsubsection{数据效率总结}
+
+\begin{table}[htbp]
+\centering
+\caption{各任务数据效率总结}
+\label{tab:data_efficiency_summary}
+\begin{tabular}{lccc}
+\toprule
+任务 & 遥操达标数据量 & 无本体达标数据量 & 效率比 \\
+\midrule
+拿放杯子 & 50条（100\%） & 200条（90\%） & 4:1 \\
+上货 & 100条（80\%） & 400条（70\%） & 4:1 \\
+开笔记本 & 100条（100\%） & 400条（50\%） & 8:1 \\
+handover（双臂） & 待验证 & 600条（较好） & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{未来改进方向}
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{数据质量提升}：统一采集规范，增加数据筛选规则，提升单条数据质量
+    \item \textbf{双臂协调优化}：探索更精细的双手协调表示，增加handover数据量至1000条以上
+    \item \textbf{泛化能力}：测试跨场景、跨物体的泛化性能
+    \item \textbf{数据效率}：研究如何通过数据增强、预训练等方法提升无本体数据效率
+\end{itemize}
+

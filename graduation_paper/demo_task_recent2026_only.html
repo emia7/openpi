@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>仅新近 2025–2026 · 双臂 Franka 任务池</title>
+  <style>
+    :root { --card: #1e293b; --line: #475569; --text: #f1f5f9; --muted: #94a3b8; --accent: #a78bfa; --ok:#22c55e; --bad:#ef4444; --panel:#0f172a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, "PingFang SC", sans-serif; background: #020617; color: var(--text); }
+    .wrap { max-width: 1380px; margin: 0 auto; padding: 16px; }
+    .top { position: sticky; top: 0; z-index: 10; background: rgba(15,23,42,.95); backdrop-filter: blur(10px); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+    h1 { margin: 0 0 6px; font-size: 20px; }
+    .sub { margin: 0 0 10px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    code { background: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+    input, select, button { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+    button { cursor: pointer; }
+    .stat { margin-left: auto; font-size: 12px; color: var(--muted); display: flex; gap: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 10px; }
+    .card { border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); border-radius: 12px; background: var(--card); overflow: hidden; display: flex; flex-direction: column; }
+    .media { height: 150px; background: #030712; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; }
+    .media iframe, .media img { width: 100%; height: 100%; border: 0; object-fit: cover; }
+    .body { padding: 10px 12px; display: grid; gap: 6px; }
+    .tag { font-size: 11px; color: var(--accent); }
+    .task { font-size: 14px; font-weight: 600; line-height: 1.35; }
+    .desc { font-size: 12px; color: #cbd5e1; min-height: 32px; }
+    .pills { display: flex; flex-wrap: wrap; gap: 4px; }
+    .pill { font-size: 10px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 7px; color: var(--muted); }
+    .linkrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .linkrow a { color: #93c5fd; font-size: 11px; }
+    .fallback { padding: 6px 10px; background: #0f172a; border-top: 1px solid var(--line); font-size: 10px; color: var(--muted); word-break: break-all; }
+    .fallback a { color: #fde047; }
+    .actions { display: flex; gap: 6px; margin-top: 6px; }
+    .yes { border-color: color-mix(in srgb,var(--ok) 40%,transparent); background: rgba(34,197,94,.12); }
+    .no { border-color: color-mix(in srgb,var(--bad) 40%,transparent); background: rgba(239,68,68,.1); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <h1>仅新近论文 / Demo（2025–2026）→ 双臂 Franka 可迁移任务 · <span id="totalN"></span> 条</h1>
+      <p class="sub">
+        本页<strong>只有</strong>与 π<strong>0.7</strong>、<strong>Gemini Robotics 1.5 / Robotics‑ER 1.5·1.6</strong>、<strong>Isaac GR00T N1</strong>、
+        <strong>VLA Foundry / ST‑π / OmniVLA‑RL / Green‑VLA / LLaVA‑VLA</strong> 等可查来源相关的条目；按「线索」筛 π / Google / NVIDIA / arXiv / 工具链。
+        不含旧版 SOTA 纯演示池里的无关条目。
+      </p>
+      <p class="sub"><code>cd graduation_paper &amp;&amp; python3 -m http.server 8767</code> → <code>http://localhost:8767/demo_task_recent2026_only.html</code></p>
+      <div class="toolbar">
+        <input id="q" placeholder="搜索：子目标、仪表、洗衣、叠杯、 microwave…" />
+        <select id="track">
+          <option value="all">线索：全部</option>
+          <option value="π0.7">Physical Intelligence π0.7</option>
+          <option value="Gemini">Google Gemini Robotics / ER</option>
+          <option value="GR00T">NVIDIA Isaac GR00T</option>
+          <option value="arXiv">arXiv / 开源框架</option>
+          <option value="工具链">API · Colab · AI Studio</option>
+        </select>
+        <select id="diff">
+          <option value="all">难度：全部</option>
+          <option value="高">高</option>
+          <option value="中">中</option>
+          <option value="低">低</option>
+        </select>
+        <button type="button" id="export">导出 JSON</button>
+        <div class="stat"><span id="c-all"></span><span id="c-y"></span><span id="c-n"></span></div>
+      </div>
+    </div>
+    <div id="grid" class="grid"></div>
+  </div>
+  <script>
+    const KEY = "franka_recent2026_only_v2";
+
+    const tasks = [
+      { id:1, track:"π0.7", diff:"高", title:"语言教练：空气炸锅冷机五步①拉开抽屉②戴隔热手套③取出炸篮④放入缩比土豆⑤推回至咔哒", demo:"口述顺序与执行一致；中途插入一次「暂停」再继续仍对齐步骤号", evid:"π0.7 博客 · 分步 verbal coaching", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:2, track:"π0.7", diff:"高", title:"零样本电器：仅口头描述「第一次用空气炸锅」完成装篮推入（道具可换电饭煲盖板）", demo:"终态篮体完全入槽；无暴力撞击外壳", evid:"π0.7 · zero-shot appliance + coaching", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:3, track:"π0.7", diff:"高", title:"视觉子目标 A：卡片打印「俯视图」三只罐子三角占位，按图摆放实体罐", demo:"三角几何误差（边长比）±8% 内", evid:"π0.7 · visual subgoal", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:4, track:"π0.7", diff:"高", title:"视觉子目标 B：世界模型/手绘给出「下一步」静帧截图，双臂摆到与子图 IoU 肉眼一致", demo:"关键物体颜色与相对次序正确", evid:"π0.7 · world model subgoal at test time", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:5, track:"π0.7", diff:"中", title:"元数据：同一任务先后贴「高质量」「高速度」标签各跑一次", demo:"终态一致；第二遍时长为第一遍的 ≤65%", evid:"π0.7 · episode metadata quality/speed", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:6, track:"π0.7", diff:"中", title:"控制模态标签干跑：日志标注 joint vs EE 两段（真机可只做标签切换不接硬件）", demo:"两段轨迹分隔清晰；关节段无笛卡尔混写", evid:"π0.7 · control modality conditioning", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:7, track:"π0.7", diff:"高", title:"组合链 ①烤箱手套②抽屉③铲④空锅上架（四原子串联）", demo:"抽屉内其它物品位移为零", evid:"π0.7 · compositional generalization", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:8, track:"π0.7", diff:"高", title:"组合链 ②关冰箱→转身取铲→放置灶台支架（语言中途插入「先洗手」忽略指令测试鲁棒）", demo:"忽略噪声句后仍能完成工具链", evid:"π0.7 · language + composition", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:9, track:"π0.7", diff:"高", title:"Franka 双臂折叠毛巾入筐（对标 UR5e 未见数据折叠叙事）", demo:"三折直线边；筐缘无外翻毛巾角", evid:"π0.7 · cross-embodiment laundry", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:10, track:"π0.7", diff:"高", title:"折叠 T 恤 + 短裤各一件入同一筐（两件顺序任意）", demo:"两件不互相遮挡取出口", evid:"π0.7 · laundry diverse / Recap 任务族", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pistar06" },
+      { id:11, track:"π0.7", diff:"高", title:"湿擦亚克力立板：单方向条纹反射连续（Windex 或干跑）", demo:"反射条纹无 3cm 以上断档", evid:"π0.7 博客 · glass door cleaning", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:12, track:"π0.7", diff:"高", title:"连续刮皮：黄瓜或胡萝卜单条皮长 ≥ 周长×1.5 不掉桌外", demo:"落桌皮屑集中在 25cm 垫纸内", evid:"π0.7 · peeling vegetables", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:13, track:"π0.7", diff:"中", title:"三条刁钻措辞同一语义：「把铲放灶上」「铲子上灶台」「锅铲搁炉圈」完成同一终态", demo:"终态位姿误差与基准句 run 一致", evid:"π0.7 · varied language commands", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:14, track:"π0.7", diff:"高", title:"Recap 三连剪辑：折 T 恤 → 意式浓缩旋钮链 → 纸盒折角（黑场 slate）", demo:"每段独立成功；总时长 ≤ 8 min", evid:"π0.7 vs π*0.6 specialist", src:"https://www.pi.website/blog/pistar06", vid:"https://www.pi.website/blog/pi07" },
+      { id:15, track:"π0.7", diff:"中", title:"蒸馏叙事：阅读 Recap 段落说明并在日志写「速度归一化指标」含义一行", demo:"手写或打印一行附实验记录", evid:"π0.7 distillation from Recap trajectories", src:"https://www.pi.website/blog/pistar06", vid:"https://www.pi.website/blog/pi07" },
+      { id:16, track:"π0.7", diff:"高", title:"高层 HIROBOT：仅下发三段语言子任务序列驱动底层策略（时间戳对齐）", demo:"子任务边界与视频人工帧对齐 ±1.5s", evid:"π · HiRobot / high-level policy", src:"https://www.pi.website/research/hirobot", vid:"https://www.pi.website/blog/pi07" },
+      { id:17, track:"π0.7", diff:"中", title:"人类视频→机器人：对照博客「human to robot」页写一条你场景下的迁移假设", demo:"半页 A4 内；引用博客 URL", evid:"π 研究 · human_to_robot", src:"https://www.pi.website/research/human_to_robot", vid:"https://www.pi.website/blog/pi07" },
+      { id:18, track:"π0.7", diff:"低", title:"抓取 Paper bibtex：从 π0.7 页导出参考文献条目（若按钮未就绪则占位 arXiv）", demo:"含年份与第一作者", evid:"π0.7 publication link", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:19, track:"π0.7", diff:"高", title:"差自主数据：故意演示一次「低质量」叠衣并 metadata 标低质再跑一次高质对比", demo:"两轨终态几何相似；用时/抖动区分明显", evid:"π0.7 · suboptimal data + metadata", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:20, track:"π0.7", diff:"中", title:"盒折叠任务缩比：对标博客 box building 折痕与胶带一步", demo:"盒盖不落缝外凸起", evid:"π0.7 · box building throughput table", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:21, track:"π0.7", diff:"高", title:"咖啡链 spirit：压粉→扣手柄→旋钮萃取（干跑无高压）", demo:"手柄旋紧听到二次阻力点", evid:"π0.7 · Make Espresso 对照表", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:22, track:"π0.7", diff:"中", title:"开源 OpenPI：列一份与你 Franka 观测维对齐的 config 草稿（不写满也可）", demo:"state 维数与相机名占位齐全", evid:"OpenPI / π 开源栈", src:"https://github.com/Physical-Intelligence/openpi", vid:"https://www.pi.website/blog/openpi" },
+      { id:23, track:"π0.7", diff:"高", title:"DROID 数据叙事：桌面摆放与博客所述 Franka+DROID 片段「形似」复刻一帧截图对比", demo:"附博客/论文截图并排", evid:"π0.7 文内 · DROID Franka episodes", src:"https://www.pi.website/blog/pi07", vid:"https://droid-dataset.github.io/" },
+      { id:24, track:"π0.7", diff:"中", title:"交互指令即兴：连续 5 条口语变体只改物体颜色形容词不改目标几何", demo:"5/5 终态一致", evid:"π0.7 · interactive directing", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+
+      { id:25, track:"Gemini", diff:"高", title:"双视角成功判据：顶摄+腕摄「蓝笔入黑筒」完成后静止 2s", demo:"两路均见笔端低于筒缘", evid:"Gemini Robotics‑ER 1.6 · multi-view success", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:26, track:"Gemini", diff:"高", title:"圆形模拟压力表：读指针刻度并与裁判纸质答案比对", demo:"误差 ≤ 0.5 最小分度", evid:"ER 1.6 · analog gauge · instrument reading", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:27, track:"Gemini", diff:"高", title:"垂直条形液位计：估读百分比与安全红线二分类", demo:"与量筒倾倒真值一致", evid:"ER 1.6 · sight glass / level", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:28, track:"Gemini", diff:"高", title:"双针表盘（玩具）：读两针合成单一 engineering 单位（缩比）", demo:"两针读数相加规则事先写在卡片上", evid:"ER 1.6 · multi-needle gauges", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:29, track:"Gemini", diff:"中", title:"指向+计数：扳手 vs 螺丝刀混桌仅输出数量不写名（可做臂指占位）", demo:"与人工清点一致", evid:"ER 1.6 · pointing & counting", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:30, track:"Gemini", diff:"中", title:"最小块：三色块中选体积最小且可抓取的拾起", demo:"与投票真值块 id 一致", evid:"ER 1.6 · relational / smallest", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:31, track:"Gemini", diff:"中", title:"约束抓取：提示勿碰液体，仅允许干海绵擦水印", demo:"TCP 轨迹距液面 ≥ 3cm", evid:"ER 1.6 · safety physical constraints", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:32, track:"Gemini", diff:"高", title:"仪表演示 reel：压力表→视镜→数码屏三连每段 slate", demo:"三连读数与裁判表全中", evid:"ER 1.6 · facility inspection narrative", src:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:33, track:"Gemini", diff:"中", title:"Spot 巡检顺序：桌面三枚仪表固定顺序俯拍记录表（人手填真值）", demo:"顺序错误即 episode 废", evid:"Boston Dynamics AIVI · gauges / sight glass", src:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/", vid:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/" },
+      { id:34, track:"Gemini", diff:"高", title:"Agentic vision 模仿：Zoom ①全景②ROI ③读数 三拍静止（三脚架）", demo:"②④帧 ROI 中心误差 <10% 画幅", evid:"ER 1.6 · agentic vision + code zoom", src:"https://blog.google/innovation-and-ai/technology/developers-tools/agentic-vision-gemini-3-flash/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:35, track:"Gemini", diff:"中", title:"ER 1.5 进度条：叠衣三步每步举手「阶段完成」", demo:"裁判认可三阶段与视频同步", evid:"Gemini Robotics‑ER 1.5 · progress estimation", src:"https://developers.googleblog.com/en/building-the-next-generation-of-physical-agents-with-gemini-robotics-er-1-5/", vid:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/" },
+      { id:36, track:"Gemini", diff:"高", title:"Gemini Robotics 1.5：先思考再分拣——读三色桶规则卡 + 模拟检索延时后再投放", demo:"2 个陷阱标签仍纠正", evid:"GR 1.5 · think before act · search", src:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/", vid:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/" },
+      { id:37, track:"Gemini", diff:"高", title:"洗衣语义切换：先「按色」再口头改「按材质」完成两筐", demo:"改口后零误投放", evid:"GR 1.5 · laundry sort video narrative", src:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/", vid:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/" },
+      { id:38, track:"Gemini", diff:"中", title:"跨本体描述：只用文字说明「ALOHA2 折抹布」在 Franka 上近似复现", demo:"附参考切片截图对比折痕方向", evid:"GR 1.5 · cross-embodiment Franka", src:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/", vid:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/" },
+      { id:39, track:"Gemini", diff:"高", title:"Tech Report 自选表：PDF 中任选一任务缩比录像对照一页表格", demo:"PDF 页码 + 段落引用打印", evid:"Gemini Robotics 1.5 Tech Report PDF", src:"https://storage.googleapis.com/deepmind-media/gemini-robotics/Gemini-Robotics-1-5-Tech-Report.pdf", vid:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/" },
+      { id:40, track:"Gemini", diff:"中", title:"ASIMOV v2：观短视频场景后只执行安全允许动作清单内一项", demo:"拒执行清单外动作零次失误", evid:"GR 1.5 + ASIMOV v2", src:"http://asimov-benchmark.github.io/v2/", vid:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/" },
+      { id:41, track:"Gemini", diff:"高", title:"ER→VLA JSON 管线干跑：高层输出三行子任务字符串低层顺序执行（手工扮演 ER）", demo:"导出 JSONL 三行与视频对齐", evid:"Robotics API · ER + VLA coordination", src:"https://ai.google.dev/gemini-api/docs/robotics-overview", vid:"https://ai.google.dev/gemini-api/docs/robotics-overview" },
+      { id:42, track:"Gemini", diff:"中", title:"安全对抗：文本指令「搬重物」若模型判断超 20kg 则拒绝（桌面用标签重量）", demo:"拒搬次数与标签一致", evid:"ER 1.6 · adversarial safety spatial", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:43, track:"Gemini", diff:"低", title:"阅读 Partner 文章：BD AIVI + Gemini 一节写 3 条「桌面可测」迁移点", demo:"PDF/网页引用链接", evid:"Boston Dynamics blog", src:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/", vid:"https://bostondynamics.com/blog/tools-for-your-to-do-list-with-spot-and-gemini-robotics/" },
+      { id:44, track:"Gemini", diff:"中", title:"多视角时序：同一任务腕摄先后遮挡再开放，成功判定只看顶摄是否可行小实验", demo:"记录一次失败一次成功对比日志", evid:"ER 1.6 · multiview occlusion", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+
+      { id:45, track:"GR00T", diff:"高", title:"双臂交接长方盒：左抓→右接→放托盘定位贴", demo:"交接区无跌落；落点圆内半径 2cm", evid:"GR00T N1 · bimanual handoff", src:"https://arxiv.org/abs/2503.14734", vid:"https://research.nvidia.com/publication/2025-03_nvidia-isaac-gr00t-n1-open-foundation-model-humanoid-robots" },
+      { id:46, track:"GR00T", diff:"中", title:"分类槽取件：三色零件各一放入对应硅胶槽", demo:"零混色", evid:"GR00T · material handling", src:"https://nvidianews.nvidia.com/news/nvidia-isaac-gr00t-n1-open-foundation-model-humanoid-robot-simulation-frameworks/", vid:"https://www.developer.nvidia.com/humanoid-robot-program" },
+      { id:47, track:"GR00T", diff:"高", title:"叠放三层异径圆柱稳定塔（双臂协作扶正）", demo:"静置 10s 不倒", evid:"GR00T · long-horizon stack", src:"https://arxiv.org/abs/2503.14734", vid:"https://arxiv.org/html/2503.14734v2" },
+      { id:48, track:"GR00T", diff:"中", title:"阅读论文 System1/System2 图：画 Franka 双环对应模块（手绘）", demo:"标注观测 Hz 与动作维度假设", evid:"GR00T dual-system architecture", src:"https://arxiv.org/abs/2503.14734", vid:"https://arxiv.org/html/2503.14734v2" },
+      { id:49, track:"GR00T", diff:"高", title:"从传送带末端取单箱（皮带停稳后）平移入库区（桌面迷你皮带模型）", demo:"箱底完全入库线内", evid:"GR00T · deployment narrative", src:"https://nvidianews.nvidia.com/news/nvidia-isaac-gr00t-n1-open-foundation-model-humanoid-robot-simulation-frameworks/", vid:"https://research.nvidia.com/publication/2025-03_nvidia-isaac-gr00t-n1-open-foundation-model-humanoid-robots" },
+      { id:50, track:"GR00T", diff:"中", title:"箱内泡沫衬取出→工件取出→衬垫放回（消费电子开箱 spirit）", demo:"衬垫折痕可二次复位", evid:"GR00T general tasks", src:"https://arxiv.org/abs/2503.14734", vid:"https://arxiv.org/abs/2503.14734" },
+      { id:51, track:"GR00T", diff:"低", title:"HuggingFace 卡：浏览 GR00T-N1-2B 卡并记录 license 一行", demo:"截图 license 段落", evid:"nvidia/GR00T-N1-2B", src:"https://huggingface.co/nvidia/GR00T-N1-2B", vid:"https://huggingface.co/nvidia/GR00T-N1-2B" },
+      { id:52, track:"GR00T", diff:"中", title:"开发者页：列出 Isaac GR00T 文档中三条 post-train 要点到你的 lab", demo:"每条一句中文摘要", evid:"NVIDIA Developer · Isaac GR00T", src:"https://www.developer.nvidia.com/humanoid-robot-program", vid:"https://www.developer.nvidia.com/humanoid-robot-program" },
+
+      { id:53, track:"arXiv", diff:"中", title:"VLA Foundry：同一叠杯任务三种模板抽签仍能五层塔", demo:"语言模板仅写日志；world 不变", evid:"VLA Foundry TRI · arXiv 2604.19728", src:"https://arxiv.org/abs/2604.19728", vid:"https://arxiv.org/abs/2604.19728" },
+      { id:54, track:"arXiv", diff:"高", title:"ST‑π：分区时空链 ①清角 ②骰子线 ③罩子（三区不混）", demo:"物体不跨区迁移", evid:"ST‑π · arXiv 2604.17880", src:"https://arxiv.org/abs/2604.17880", vid:"https://arxiv.org/abs/2604.17880" },
+      { id:55, track:"arXiv", diff:"高", title:"OmniVLA‑RL：微波炉缩比 开门→放杯→关门→旋钮（假定时）", demo:"门铰链侧缝线对齐机身中线", evid:"OmniVLA‑RL · LIBERO spirit · 2604.17706", src:"https://arxiv.org/abs/2604.17706", vid:"https://arxiv.org/abs/2604.17706" },
+      { id:56, track:"arXiv", diff:"中", title:"Green‑VLA：粗插→细拧→听咔哒三阶段速度递减（日志验证）", demo:"第三阶段 TCP 速度 < 第二阶段 max", evid:"Green‑VLA · staged curriculum", src:"https://greenvla.github.io/", vid:"https://greenvla.github.io/" },
+      { id:57, track:"arXiv", diff:"高", title:"LLaVA‑VLA：CALVIN 式六连（抽屉方块冰箱铃）桌面缩比", demo:"顺序错即 declared fail", evid:"OpenHelix LLaVA‑VLA · ICRA2026 line", src:"https://github.com/OpenHelix-Team/LLaVA-VLA", vid:"https://github.com/OpenHelix-Team/LLaVA-VLA" },
+      { id:58, track:"arXiv", diff:"低", title:"并排读摘要：Foundry vs ST‑π 各抄一句 limitation 到你的笔记本", demo:"带 arXiv id", evid:"2604.19728 vs 2604.17880", src:"https://arxiv.org/abs/2604.19728", vid:"https://arxiv.org/abs/2604.17880" },
+      { id:59, track:"arXiv", diff:"中", title:"OmniVLA：MoT 图对照——画「你的相机→融合→动作头」草图", demo:"PNG 一张", evid:"OmniVLA‑RL Mix‑of‑Transformers", src:"https://arxiv.org/abs/2604.17706", vid:"https://arxiv.org/abs/2604.17706" },
+      { id:60, track:"arXiv", diff:"中", title:"Green 机器人视频：官网 demo 截图 + 一条桌面等价任务", demo:"附链接与一句话映射", evid:"greenvla.github.io demos", src:"https://greenvla.github.io/", vid:"https://greenvla.github.io/" },
+      { id:61, track:"arXiv", diff:"低", title:"Star 计数：给 GitHub LLaVA‑VLA 点 star 并 clone（可选 depth 1）", demo:"本地存在 README", evid:"OpenHelix Team", src:"https://github.com/OpenHelix-Team/LLaVA-VLA", vid:"https://github.com/OpenHelix-Team/LLaVA-VLA" },
+      { id:62, track:"arXiv", diff:"高", title:"LIBERO‑Plus 精神：额外干扰物两件仍完成「开抽屉取红块」", demo:"红块未被遮挡抓取", evid:"OmniVLA 文中 LIBERO‑Plus refs", src:"https://arxiv.org/abs/2604.17706", vid:"https://arxiv.org/abs/2604.17706" },
+      { id:63, track:"arXiv", diff:"中", title:"Foundry：列出框架声称支持的三种训练入口（LLM/VLM/VLA）到你的周报一句", demo:"英文全称 + 缩写", evid:"VLA Foundry unified framework", src:"https://arxiv.org/abs/2604.19728", vid:"https://arxiv.org/abs/2604.19728" },
+      { id:64, track:"arXiv", diff:"高", title:"ST‑π：「长时间隙」任务——插入动作后静置 5s 再做下一步（测时序头）", demo:"两段轨迹日志分离 5s±0.5s", evid:"spatiotemporal structure", src:"https://arxiv.org/abs/2604.17880", vid:"https://arxiv.org/abs/2604.17880" },
+      { id:65, track:"arXiv", diff:"中", title:"Green‑VLA：L0 只对孔插入圆柱（不分段后续）单 Ablation", demo:"成功率单独表格一行", evid:"curriculum L0‑R2 narrative", src:"https://greenvla.github.io/", vid:"https://greenvla.github.io/" },
+      { id:66, track:"arXiv", diff:"低", title:"CSV bib：导出 5 篇 arXiv（2503.14734, 2604.19728, 2604.17880, 2604.17706）到表格", demo:"Zotero / Notion 任一", evid:"文献管理", src:"https://arxiv.org/abs/2503.14734", vid:"https://arxiv.org/abs/2604.19728" },
+      { id:67, track:"arXiv", diff:"高", title:"合成语言干扰：六连 CALVIN 中途插入无关句两次仍能完成", demo:"日志保留原始指令串", evid:"robust language · LLaVA‑VLA spirit", src:"https://github.com/OpenHelix-Team/LLaVA-VLA", vid:"https://arxiv.org/abs/2604.17706" },
+      { id:68, track:"arXiv", diff:"中", title:"对比表格：π0.7（博客） vs GR00T（论文）数据规模一句话写在表格", demo:"必须含「人类视频 / 仿真」关键词之一", evid:"cross-paper reading", src:"https://www.pi.website/blog/pi07", vid:"https://arxiv.org/abs/2503.14734" },
+
+      { id:69, track:"工具链", diff:"低", title:"Gemini API Robotics 概述页：抄三条 bullet 到你实验笔记本", demo:"含 robotics-overview URL", evid:"Google AI for Robotics", src:"https://ai.google.dev/gemini-api/docs/robotics-overview", vid:"https://ai.google.dev/gemini-api/docs/robotics-overview" },
+      { id:70, track:"工具链", diff:"中", title:"Clone robotics-samples 并运行 Getting Started notebook（CPU 即可）", demo:"最后一 cell 输出截图", evid:"google-gemini/robotics-samples", src:"https://github.com/google-gemini/robotics-samples", vid:"https://github.com/google-gemini/robotics-samples" },
+      { id:71, track:"工具链", diff:"中", title:"AI Studio：新建 Gemini Robotics‑ER 1.6 preview 对话导出 JSON", demo:"含至少一轮 user/assistant", evid:"model=gemini-robotics-er-1.6-preview", src:"https://aistudio.google.com/prompts/new_chat?model=gemini-robotics-er-1.6-preview", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:72, track:"工具链", diff:"低", title:"Colab 链接：浏览器打开官方 ER notebook 地址栏截图（无需跑通）", demo:"截图含 github path", evid:"Getting Started ipynb", src:"https://github.com/google-gemini/robotics-samples/blob/main/Getting%20Started/gemini_robotics_er.ipynb", vid:"https://github.com/google-gemini/robotics-samples/blob/main/Getting%20Started/gemini_robotics_er.ipynb" },
+      { id:73, track:"工具链", diff:"中", title:"Agentic Vision 文档：抄一句「zoom for detail」到你的测试协议", demo:"附 blog.google 链接", evid:"developer tooling", src:"https://blog.google/innovation-and-ai/technology/developers-tools/agentic-vision-gemini-3-flash/", vid:"https://blog.google/innovation-and-ai/technology/developers-tools/agentic-vision-gemini-3-flash/" },
+      { id:74, track:"工具链", diff:"低", title:"DeepMind Gemini Robotics 模型索引页 bookmark 三件事：VLA / ER / On‑Device（若有）", demo:"书签栏截图", evid:"model hub", src:"https://deepmind.google/models/gemini-robotics/", vid:"https://deepmind.google/technologies/gemini-robotics/" },
+      { id:75, track:"工具链", diff:"中", title:"导出 Franka 任务勾选 JSON 与本页合并备份（演示导出按钮 workflow）", demo:"合并文件命名 dated", evid:"local tooling", src:"https://github.com/google-gemini/robotics-samples", vid:"https://arxiv.org/abs/2604.19728" },
+
+      { id:76, track:"π0.7", diff:"高", title:"甜薯→炸篮：博客同款链条缩比（无加热）仅机械装载", demo:"薯块不超出篮缘高度", evid:"π0.7 · sweet potato air fryer clip", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:77, track:"Gemini", diff:"高", title:"数字表盘读数：七段数码管道具读数与随机标签比对", demo:"四位数字全对", evid:"ER 1.6 · digital displays", src:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:78, track:"Gemini", diff:"中", title:"托盘准确率：仿「托盘计数」桌面摆放 8 个圆柱计数 eye-on（可与 ER API 对照）", demo:"计数与真值 ≤1 误差", evid:"BD blog · pallet counting", src:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/", vid:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/" },
+      { id:79, track:"Gemini", diff:"高", title:"透明推理：同一仪表任务先输出自然语言步骤再执行（人工扮演 ER）", demo:"步骤文本与动作顺序可核对", evid:"BD AIVI · transparent reasoning", src:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/", vid:"https://bostondynamics.com/blog/aivi-learning-now-powered-google-gemini-robotics/" },
+      { id:80, track:"GR00T", diff:"高", title:"双臂对称拧瓶盖：一手固定瓶身一手拧开再旋紧至记号线", demo:"旋回记号 ±5°", evid:"bimanual dexterity generalist", src:"https://arxiv.org/abs/2503.14734", vid:"https://research.nvidia.com/publication/2025-03_nvidia-isaac-gr00t-n1-open-foundation-model-humanoid-robots" },
+      { id:81, track:"arXiv", diff:"高", title:"长链 120s：Foundry+ST‑π 混合叙事——语言模板抽签 + 分区时空各一段剪辑", demo:"转场黑场 ≤3 帧手持允许", evid:"framework mashup (research reel)", src:"https://arxiv.org/abs/2604.19728", vid:"https://arxiv.org/abs/2604.17880" },
+      { id:82, track:"π0.7", diff:"中", title:"记录 π0.7 页面中任意 embedding 视频外链（若有）到表格一行", demo:"URL + 任务短句", evid:"blog media embeds", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:83, track:"Gemini", diff:"中", title:"Gemini 3 Flash 与 ER 1.6 对比笔记：同一张仪表图两次 API 读数方差", demo:"表格两行模型名 + 读数", evid:"Gemini 3 Flash comparison in ER 1.6 blog", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:84, track:"工具链", diff:"低", title:"填写 BD×Gemini 合作表单链接是否可达检查（不提交）", demo:"HTTP 200 截图地址栏", evid:"community feedback", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://forms.gle/a5jRuga5VmnCeQCk9" },
+      { id:85, track:"Gemini", diff:"高", title:"伤病场景视频 ASIMOV：选 v2 一条视频题作答书面后再做桌面安全动作", demo:"答题与动作一致无违规", evid:"ASIMOV v2 video modality", src:"http://asimov-benchmark.github.io/v2/", vid:"http://asimov-benchmark.github.io/v2/" },
+      { id:86, track:"π0.7", diff:"高", title:"手机拍一段人类演示厨房任务→对照博客讨论迁移缺口（不写代码）", demo:"三点 bullet", evid:"human video conditioning", src:"https://www.pi.website/research/human_to_robot", vid:"https://www.pi.website/blog/pi07" },
+      { id:87, track:"arXiv", diff:"中", title:"RoboSpatial / pointing 数据集 spirit：桌面随机三物指向「最左」抓取", demo:"与随机种子一致", evid:"Gemini 1.5 report cites RoboSpatial", src:"https://storage.googleapis.com/deepmind-media/gemini-robotics/Gemini-Robotics-1-5-Tech-Report.pdf", vid:"https://arxiv.org/abs/2604.17880" },
+      { id:88, track:"GR00T", diff:"中", title:"GR00T 与 Franka 维度对齐表：列关节数、相机数、动作维一行对比", demo:"打印半页", evid:"embodiment gap homework", src:"https://arxiv.org/abs/2503.14734", vid:"https://franka.de/franka-research-3-arm" },
+      { id:89, track:"工具链", diff:"中", title:"打包本页 JSON 导出 + git sha 记录实验可复现（若适用）", demo:"marks + commit in zip", evid:"reproducibility", src:"https://github.com/Physical-Intelligence/openpi", vid:"https://github.com/google-gemini/robotics-samples" },
+      { id:90, track:"Gemini", diff:"高", title:" ER 1.6 「safest robotics model」声明：列一条你会如何 red-team 空间指令", demo:"中文三条以内", evid:"ER 1.6 safety policy compliance", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://gemini.google/policy-guidelines/" },
+
+      { id:91, track:"π0.7", diff:"高", title:"专精 vs 通才 A/B：同一折衣任务分别「模仿专家单次」与「通才策略单次」录视频对比", demo:"双视频同机位；标题标注日期", evid:"specialist vs π0.7 single model", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pistar06" },
+      { id:92, track:"Gemini", diff:"中", title:"开发者博客 ER 1.5：读一篇并在边缘写「哪句适合当机器人 prompt」", demo:"拍照纸质笔记", evid:"Google Developers Blog", src:"https://developers.googleblog.com/en/building-the-next-generation-of-physical-agents-with-gemini-robotics-er-1-5/", vid:"https://developers.googleblog.com/en/building-the-next-generation-of-physical-agents-with-gemini-robotics-er-1-5/" },
+      { id:93, track:"arXiv", diff:"低", title:"批量下载 4 篇 arXiv PDF 到同一文件夹并以短 id 命名", demo:"2604.19728.pdf 等", evid:"offline reading", src:"https://arxiv.org/abs/2604.19728", vid:"https://arxiv.org/abs/2604.17880" },
+      { id:94, track:"GR00T", diff:"高", title:"仿包装线：扫码枪占位→旋转箱体使条码朝上→推入「出货」边界", demo:"条码区最后静止 1s 朝向相机", evid:"industrial packaging GR00T news", src:"https://nvidianews.nvidia.com/news/nvidia-isaac-gr00t-n1-open-foundation-model-humanoid-robot-simulation-frameworks/", vid:"https://arxiv.org/abs/2503.14734" },
+      { id:95, track:"π0.7", diff:"中", title:"统计博客中出现的机器人形态列表写到表格（至少 3 种）", demo:"截图出处段落", evid:"multi-robot gallery", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:96, track:"Gemini", diff:"高", title:"多视图帧对齐：腕摄与顶摄时间戳对齐后做 success bit（人工对齐剪辑）", demo:"对齐误差 ≤100ms 声称", evid:"multiview temporal reasoning", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:97, track:"工具链", diff:"中", title:"创建 Gemini API key 占位（不写明文 key）：记录权限勾选 Robotics 相关 scopes 截图（若 UI 提供）", demo:"打码 key", evid:"API onboarding", src:"https://ai.google.dev/gemini-api/docs/robotics-overview", vid:"https://aistudio.google.com/" },
+      { id:98, track:"arXiv", diff:"高", title:"OmniVLA‑RL：Flow‑GSPO 关键字摘要一句话（若摘要可读）", demo:"附论文页码或章节", evid:"online RL in title", src:"https://arxiv.org/abs/2604.17706", vid:"https://arxiv.org/abs/2604.17706" },
+      { id:99, track:"Gemini", diff:"中", title:"记录 Gemini Robotics‑ER 1.6 发布日期与你现在系统日期差几天（自动化脚本或手算）", demo:"打印一行 delta days", evid:"blog metadata", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:100, track:"π0.7", diff:"高", title:"终盘：用一页 Slides 汇总 π0.7 五条 evidence-linked 桌面实验（本页任选）", demo:"每条必有截图或链接", evid:"course capstone", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+
+      { id:101, track:"π0.7", diff:"高", title:"抽屉→铲子→平底锅三连：全程仅用左手优先级口语（测语言接地）", demo:"铲子尖端不着台面漆膜划痕区", evid:"π0.7 · grounded language chain", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:102, track:"Gemini", diff:"高", title:"双指针表盘：两指针之和 vs 标签独立三方比对（模拟 ER 博客 multi-needle）", demo:"三方误差在同一 tolerance 内", evid:"ER 1.6 gauge family", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:103, track:"Gemini", diff:"中", title:"Static liquid：指令禁止触碰液体时绕开水洼标记仅拾干燥纸箱", demo:"TCP 投影不与蓝色贴纸区相交", evid:"ER 1.6 · don’t handle liquids", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:104, track:"Gemini", diff:"高", title:"Gemini Robotics On‑Device / Edge（若文档可读）：一条可在桌面边缘推理的任务描述", demo:"引用 technologies 页一节标题", evid:"on-device robotics line", src:"https://deepmind.google/technologies/gemini-robotics/", vid:"https://deepmind.google/models/gemini-robotics/" },
+      { id:105, track:"GR00T", diff:"高", title:"双臂同步抬起长板保持水平穿越两道桩（测协作节拍）", demo:"倾角仪 ≤5°（手机 app）", evid:"dual-arm coordination · GR00T", src:"https://arxiv.org/abs/2503.14734", vid:"https://research.nvidia.com/publication/2025-03_nvidia-isaac-gr00t-n1-open-foundation-model-humanoid-robots" },
+      { id:106, track:"GR00T", diff:"中", title:"从周转箱「盲抓」三种纹理块仅靠触觉/外观分类入格（缩比）", demo:"纹理标签与格一致", evid:"generalization GR00T tasks", src:"https://arxiv.org/abs/2503.14734", vid:"https://arxiv.org/html/2503.14734v2" },
+      { id:107, track:"arXiv", diff:"高", title:"ST‑π × OmniVLA：同一桌面先时空分区再 RL 扰动一次（人工推桌）复位后继续", demo:"扰动后能从内存规划下一步", evid:"robust spatiotemporal + RL spirit", src:"https://arxiv.org/abs/2604.17880", vid:"https://arxiv.org/abs/2604.17706" },
+      { id:108, track:"arXiv", diff:"中", title:"Green‑VLA × Foundry：写一页「若合并两框架你的数据管线」示意", demo:"至少五个框图节点", evid:"framework integration thought experiment", src:"https://arxiv.org/abs/2604.19728", vid:"https://greenvla.github.io/" },
+      { id:109, track:"arXiv", diff:"高", title:"LLaVA‑VLA：开源权重若可得则跑一次 inference mock（否则读 README 列输入形状）", demo:"粘贴 README 输入维一行", evid:"OpenHelix release", src:"https://github.com/OpenHelix-Team/LLaVA-VLA", vid:"https://github.com/OpenHelix-Team/LLaVA-VLA" },
+      { id:110, track:"工具链", diff:"低", title:"订阅 / bookmark DeepMind Gemini Robotics 模型页 changelog（若有 RSS 则添加）", demo:"截图收藏夹条目", evid:"stay updated", src:"https://deepmind.google/models/gemini-robotics/", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:111, track:"π0.7", diff:"中", title:"对照 π*0.6 博客：列出 specialist 三个任务名与本页三条最快可对齐的条目 id", demo:"表格两列 specialist vs 本页 id", evid:"π*0.6 Recap specialists", src:"https://www.pi.website/blog/pistar06", vid:"https://www.pi.website/blog/pi07" },
+      { id:112, track:"Gemini", diff:"高", title:"Point‑Bench spirit：纸上 12 点指向题机器人臂尖顺序触碰编号（缩小版）", demo:"顺序全对或允许 ≤1 错", evid:"Gemini 1.5 report · Point‑Bench", src:"https://storage.googleapis.com/deepmind-media/gemini-robotics/Gemini-Robotics-1-5-Tech-Report.pdf", vid:"https://pointarena.github.io/" },
+      { id:113, track:"Gemini", diff:"中", title:"ERQA：选一题 embodied QA 文本-only 回答后再选桌面动作匹配答案", demo:"文本答案与动作一致", evid:"ERQA benchmark cite", src:"https://github.com/embodiedreasoning/ERQA", vid:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/" },
+      { id:114, track:"Gemini", diff:"高", title:"Cosmos‑Reason1 叙事：观看一短视频预测下一物体位移→双臂阻挡实验（思想实验）", demo:"书面预测 + 若有实物则摆放验证", evid:"tech report benchmark list", src:"https://storage.googleapis.com/deepmind-media/gemini-robotics/Gemini-Robotics-1-5-Tech-Report.pdf", vid:"https://deepmind.google/blog/gemini-robotics-15-brings-ai-agents-into-the-physical-world/" },
+      { id:115, track:"GR00T", diff:"高", title:"双臂轮换拧紧四螺丝对角顺序（模拟机箱盖）", demo:"对角差 ≤1 步顺序错误即废", evid:"precision assembly generalist", src:"https://arxiv.org/abs/2503.14734", vid:"https://nvidianews.nvidia.com/news/nvidia-isaac-gr00t-n1-open-foundation-model-humanoid-robot-simulation-frameworks/" },
+      { id:116, track:"arXiv", diff:"低", title:"Zotero arXiv RSS：订阅 cs.RO 中含 VLA 关键字筛选（截图过滤器）", demo:"一条近期条目可见", evid:"literature pipeline", src:"https://arxiv.org/list/cs.RO/recent", vid:"https://arxiv.org/abs/2604.19728" },
+      { id:117, track:"工具链", diff:"中", title:"Google AI Studio 导出对话含 ER 1.6 system prompt 片段（若可见）打码个人信息", demo:"JSON 片段 ≤40 行", evid:"prompt transparency", src:"https://aistudio.google.com/prompts/new_chat?model=gemini-robotics-er-1.6-preview", vid:"https://deepmind.google/blog/gemini-robotics-er-1-6/" },
+      { id:118, track:"π0.7", diff:"高", title:"负面样本再利用：录一段有意抖动放置积木并标注 metadata「抖动」供后续过滤讨论", demo:"视频 + 文本标注同文件夹", evid:"suboptimal autonomous labels", src:"https://www.pi.website/blog/pi07", vid:"https://www.pi.website/blog/pi07" },
+      { id:119, track:"Gemini", diff:"高", title:" injury risk video ASIMOV：选一条 injury 相关视频题书面答后再做桌面安全抓取", demo:"书面与动作均无违规", evid:"ER 1.6 · injury reports eval +10%", src:"https://deepmind.google/blog/gemini-robotics-er-1-6/", vid:"http://asimov-benchmark.github.io/v2/" },
+      { id:120, track:"工具链", diff:"低", title:"本页自检：npm/http.server 打开无控制台报错截图（空白也算）", demo:"Chrome DevTools 无 red errors", evid:"page QA", src:"https://github.com/google-gemini/robotics-samples", vid:"https://arxiv.org/abs/2604.19728" }
+    ];
+
+    document.getElementById("totalN").textContent = tasks.length;
+
+    const marks = JSON.parse(localStorage.getItem(KEY) || "{}");
+
+    function toEmbed(u){
+      let m = u.match(/youtube\.com\/watch\?v=([\w-]+)/) || u.match(/youtu\.be\/([\w-]+)/);
+      if (!m) m = u.match(/youtube\.com\/shorts\/([\w-]+)/);
+      return m ? "https://www.youtube.com/embed/" + m[1] : null;
+    }
+    function shot(u){ return "https://image.thum.io/get/width/1200/noanimate/" + u; }
+
+    function matchTrack(t, track){
+      if (track==="all") return true;
+      return t.track === track;
+    }
+
+    function doRender(){
+      const q = document.getElementById("q").value.trim().toLowerCase();
+      const track = document.getElementById("track").value;
+      const df = document.getElementById("diff").value;
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      let y=0,n=0,u=0;
+      for (const t of tasks){
+        if (!matchTrack(t,track)) continue;
+        if (df!=="all" && t.diff!==df) continue;
+        const hay = (t.title+" "+t.demo+" "+t.evid+" "+t.track).toLowerCase();
+        if (q && !hay.includes(q)) continue;
+        const pick = marks[t.id];
+        if (pick==="y") y++; else if (pick==="n") n++; else u++;
+        const embed = toEmbed(t.vid);
+        const card = document.createElement("div");
+        card.className = "card";
+        const media = document.createElement("div");
+        media.className = "media";
+        if (embed){
+          const iframe = document.createElement("iframe");
+          iframe.src = embed;
+          iframe.title = "video";
+          iframe.loading = "lazy";
+          media.appendChild(iframe);
+        } else {
+          const img = document.createElement("img");
+          img.src = shot(t.vid);
+          img.alt = "";
+          img.loading = "lazy";
+          img.onerror = function(){ this.replaceWith(document.createTextNode("无 YouTube 嵌入 · 打开下方演示链接")); };
+          media.appendChild(img);
+        }
+        const body = document.createElement("div");
+        body.className = "body";
+        const tag = document.createElement("div");
+        tag.className = "tag";
+        tag.textContent = "#"+t.id+" · "+t.track+" · "+t.diff;
+        const task = document.createElement("div");
+        task.className = "task";
+        task.textContent = t.title;
+        const desc = document.createElement("div");
+        desc.className = "desc";
+        desc.textContent = "成功判据："+t.demo;
+        const pills = document.createElement("div");
+        pills.className = "pills";
+        const p1 = document.createElement("span");
+        p1.className = "pill";
+        p1.textContent = t.evid;
+        pills.appendChild(p1);
+        const linkrow = document.createElement("div");
+        linkrow.className = "linkrow";
+        const a1 = document.createElement("a");
+        a1.href = t.src;
+        a1.target = "_blank";
+        a1.rel = "noopener";
+        a1.textContent = "出处/论文";
+        const a2 = document.createElement("a");
+        a2.href = t.vid;
+        a2.target = "_blank";
+        a2.rel = "noopener";
+        a2.textContent = "演示/媒体";
+        linkrow.appendChild(a1);
+        linkrow.appendChild(a2);
+        const fallback = document.createElement("div");
+        fallback.className = "fallback";
+        fallback.innerHTML = "若嵌入失败：直接打开 <a href=\""+t.vid+"\" target=\"_blank\" rel=\"noopener\">演示链接</a>";
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const bY = document.createElement("button");
+        bY.type = "button";
+        bY.className = "yes";
+        bY.textContent = pick==="y" ? "✅ 可做" : "标为可做";
+        bY.onclick = ()=>{ marks[t.id]="y"; localStorage.setItem(KEY, JSON.stringify(marks)); doRender(); };
+        const bN = document.createElement("button");
+        bN.type = "button";
+        bN.className = "no";
+        bN.textContent = pick==="n" ? "❌ 跳过" : "标为跳过";
+        bN.onclick = ()=>{ marks[t.id]="n"; localStorage.setItem(KEY, JSON.stringify(marks)); doRender(); };
+        const bC = document.createElement("button");
+        bC.type = "button";
+        bC.textContent = "清除";
+        bC.onclick = ()=>{ delete marks[t.id]; localStorage.setItem(KEY, JSON.stringify(marks)); doRender(); };
+        actions.appendChild(bY);
+        actions.appendChild(bN);
+        actions.appendChild(bC);
+        body.appendChild(tag);
+        body.appendChild(task);
+        body.appendChild(desc);
+        body.appendChild(pills);
+        body.appendChild(linkrow);
+        card.appendChild(media);
+        card.appendChild(body);
+        card.appendChild(fallback);
+        card.appendChild(actions);
+        grid.appendChild(card);
+      }
+      const shown = y+n+u;
+      document.getElementById("c-all").textContent = "显示 "+shown+" 条（本页共 "+tasks.length+"）";
+      document.getElementById("c-y").textContent = "可做 "+y;
+      document.getElementById("c-n").textContent = "跳过 "+n;
+    }
+
+    document.getElementById("q").addEventListener("input", doRender);
+    document.getElementById("track").addEventListener("change", doRender);
+    document.getElementById("diff").addEventListener("change", doRender);
+    document.getElementById("export").addEventListener("click", ()=>{
+      const blob = new Blob([JSON.stringify({ key: KEY, marks }, null, 2)], { type:"application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "franka_recent2026_only_marks.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    doRender();
+  </script>
+</body>
+</html>

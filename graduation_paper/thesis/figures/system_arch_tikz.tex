@@ -1,0 +1,52 @@
+% 系统架构图 - TikZ版本
+\begin{tikzpicture}[scale=0.85,
+    box/.style={rectangle, draw, thick, rounded corners=5pt, 
+                minimum width=2.5cm, minimum height=2.2cm, align=center, font=\small},
+    arrow/.style={->, thick, >=stealth}
+]
+    % 四个阶段框
+    \node[box, fill=blue!15, draw=blue!60] (collect) at (0,0) {
+        \textbf{数据采集}\\[0.3em]
+        FastUMI/XV设备\\
+        D435第三视角\\
+        ROS bag记录
+    };
+    
+    \node[box, fill=green!15, draw=green!60] (process) at (3.5,0) {
+        \textbf{数据处理}\\[0.3em]
+        rosbag解析\\
+        时间同步\\
+        LeRobot格式
+    };
+    
+    \node[box, fill=red!15, draw=red!60] (train) at (7,0) {
+        \textbf{模型训练}\\[0.3em]
+        π0.5微调\\
+        图像输入\\
+        相对动作输出
+    };
+    
+    \node[box, fill=orange!15, draw=orange!60] (deploy) at (10,0) {
+        \textbf{策略部署}\\[0.3em]
+        实时推理\\
+        机器人控制
+    };
+    
+    % 箭头连接
+    \draw[arrow, blue!50] (collect.east) -- (process.west);
+    \draw[arrow, green!50] (process.east) -- (train.west);
+    \draw[arrow, red!50] (train.east) -- (deploy.west);
+    
+    % 数据格式标签
+    \node[below=0.3cm of collect, font=\scriptsize, text=gray] {rosbag};
+    \node[below=0.3cm of process, font=\scriptsize, text=gray] {mp4+json};
+    \node[below=0.3cm of train, font=\scriptsize, text=gray] {LeRobot};
+    
+    % 标题
+    \node[above=1.5cm of process, font=\large\bfseries] {无本体采集系统架构};
+    \node[above=1cm of process, font=\small] {(采集→处理→训练→部署全流程)};
+    
+    % 说明箭头
+    \draw[->, thick, gray] (1.75, -2) -- (1.75, -1.2);
+    \node[right, font=\scriptsize, text=gray] at (1.85, -1.6) {格式转换};
+\end{tikzpicture}

@@ -75,8 +75,8 @@ def resize_video_python(input_path: Path, output_path: Path,
             resized = frame_float[row_idx[:, None], col_idx[None, :]]
             resized_frames.append(resized.astype(np.uint8))
         
-        # 保存视频
-        iio.imwrite(output_path, resized_frames, fps=10.0)
+        # 保存视频 - 设置 macro_block_size=1 避免自动调整到16的倍数
+        iio.imwrite(output_path, resized_frames, fps=10.0, macro_block_size=1)
         
         return True
     except Exception as e:

@@ -1,0 +1,315 @@
+% 第5章 模型训练与信息嵌入
+\section{模型训练与信息嵌入}
+
+\subsection{引言：无本体数据的信息嵌入挑战}
+
+无本体采集的数据需要被模型有效理解和利用，才能训练出高性能的策略。本章针对"无本体数据如何实现信息嵌入"这一关键问题，探讨输入设计、状态表示和Action表示方案。
+
+\subsection{输入设计}
+
+\subsubsection{输入配置对比实验}
+
+我们系统对比了两种输入配置的性能差异：纯图像输入 vs 图像+显式状态输入。这是本研究的重要发现之一。
+
+\textbf{拿放杯子任务（400条无本体数据）}：
+
+\begin{table}[htbp]
+\centering
+\caption{拿放杯子任务：不同输入模态的性能比较（400条演示数据）}
+\label{tab:input_comparison}
+\begin{tabular}{lcp{6cm}}
+\toprule
+策略输入配置 & 测试成功率 & 行为特征观察 \\
+\midrule
+视觉图像+绝对State & 75\% & 动作保守，末端轨迹抖动，偶尔出现明显偏差 \\
+仅视觉图像 & \textbf{90\%} & 动作果断，末端轨迹平滑，泛化性好 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{反直觉的发现与分析}
+
+实验结果显示，纯图像输入方案（90\%）反而优于加入显式状态表示的方案（75\%）。这一发现初看反直觉，但可能有以下解释：
+
+\textbf{模型自身推理能力}：
+\begin{itemize}[leftmargin=2em]
+    \item π0.5模型基于大规模视觉-语言预训练，具备强大的视觉推理能力
+    \item 模型能够从图像中隐式提取空间位置信息、物体关系、操作进度
+    \item 无需显式的State输入，模型自身可以"看懂"场景并做出决策
+\end{itemize}
+
+\textbf{State噪声问题}：
+\begin{itemize}[leftmargin=2em]
+    \item 无本体采集的State估计（如SLAM位姿）存在较大误差
+    \item FastUMI/XV设备的SLAM在快速运动时容易丢帧
+    \item State估计误差反而成为噪声，干扰策略学习
+    \item 而图像信息相对完整，噪声更少
+\end{itemize}
+
+\textbf{端到端优势}：
+\begin{itemize}[leftmargin=2em]
+    \item 纯图像方案实现了真正的端到端学习，避免了中间表示的误差累积
+    \item 策略直接从像素学习到动作，无需经过State估计的"翻译"
+    \item 减少了系统复杂度，提升了可靠性
+\end{itemize}
+
+\textbf{遥操数据的对比}：
+
+值得注意的是，在遥操数据中，State输入确实有提升（上货任务80\%→92.5\%）。这说明：
+\begin{itemize}[leftmargin=2em]
+    \item State输入的价值取决于State质量
+    \item 遥操数据的State来自精确的机械臂编码器，质量高
+    \item 无本体数据的State来自SLAM估计，质量较低
+    \item 在State质量不足时，不如依赖视觉
+\end{itemize}
+
+\textbf{结论}：基于上述发现，本研究采用纯图像输入方案，简化了系统设计并获得了更好的性能。
+
+\subsection{状态表示探索}
+
+\subsubsection{ArUco码方案尝试}
+
+在第三视角坐标系统一的探索中，我们曾考虑基于ArUco码的检测方案。该方案通过在场景中放置标定板，利用计算机视觉识别ArUco码来建立统一的世界坐标系。
+
+\textbf{方案设计}：
+\begin{itemize}[leftmargin=2em]
+    \item 在操作空间中放置ArUco码标定板
+    \item 使用第三视角相机检测ArUco码，计算相机坐标系到世界坐标系的变换
+    \item 通过第一帧的双臂位姿，计算左右臂相对于世界坐标系的位置
+    \item 后续帧使用相对位移，建立双臂统一的坐标表示
+\end{itemize}
+
+\textbf{方案局限}：
+\begin{itemize}[leftmargin=2em]
+    \item 需要额外的标定设备部署，增加了系统复杂度
+    \item 动态场景中标定板可能被遮挡或移动
+    \item 增加了部署成本和时间
+    \item 对于单臂任务，坐标系统一并非必需
+\end{itemize}
+
+\textbf{最终决定}：综合考虑后，该方案未进入实际大规模测试阶段。我们最终采用纯图像输入方案，依靠模型自身的空间推理能力处理视角差异，避免了复杂的坐标系统一过程。
+
+\subsection{Action表示选择（核心）}
+
+\subsubsection{无本体采集的特殊挑战：缺少固定baselink}
+
+\textbf{问题背景}：
+
+在传统遥操作中，机器人有固定的基座（baselink），所有动作都相对于这个固定坐标系表示。然而，无本体采集中：
+\begin{itemize}[leftmargin=2em]
+    \item 操作者佩戴设备移动，没有固定的世界坐标系原点
+    \item 每次采集的初始位置可能不同
+    \item 绝对坐标表示会导致策略难以泛化
+    \item 左右臂分别有自己的坐标系，缺乏统一参考
+\end{itemize}
+
+\subsubsection{Action表示方案对比}
+
+我们系统对比了三种Action表示方案：
+
+\textbf{Absolute Action（绝对动作）}：
+\begin{itemize}[leftmargin=2em]
+    \item 定义：相对于固定世界坐标系的绝对位姿
+    \item 问题：无本体采集缺乏固定原点，绝对坐标在不同采集间差异大
+    \item 结果：策略难以泛化，部署时效果很差（机械臂基本不动或动作异常）
+\end{itemize}
+
+\textbf{Delta Action（增量动作）}：
+\begin{itemize}[leftmargin=2em]
+    \item 定义：相对于上一时刻的位姿变化
+    \item 优点：不依赖固定坐标系
+    \item 缺点：累积误差，长序列容易漂移
+    \item 结果：训练时loss下降，但部署效果仍不理想
+\end{itemize}
+
+\textbf{Relative Action（相对动作）- 最终方案}：
+\begin{itemize}[leftmargin=2em]
+    \item 定义：相对于当前episode第一帧的位姿变化（$\Delta$pose from start）
+    \item 优点：
+    \begin{itemize}
+        \item 不依赖固定坐标系，适应无本体场景
+        \item 表示的是"如何移动"而非"移动到哪里"，更具通用性
+        \item 与纯图像输入方案配合，实现端到端学习
+        \item 消除了baselink不一致的问题
+    \end{itemize}
+    \item 结果：训练稳定，泛化能力强，部署效果好
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption{不同Action表示方案的性能对比（拿放杯子任务，100条遥操数据）}
+\label{tab:action_representation}
+\begin{tabular}{lcc}
+\toprule
+Action表示 & 成功率 & 备注 \\
+\midrule
+Absolute Action & $<$10\% & 几乎无法工作 \\
+Delta Action & 30-50\% & 有一定效果但不稳定 \\
+Relative Action & \textbf{100\%} & 稳定可靠 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{具体实现}
+
+参考UMI原文方法\cite{chi2024umi}和旋转表示相关研究\cite{saxena2008mathematical,zhou2019continuity}，我们采用以下Action表示：
+
+\begin{equation}
+Action_t = [\Delta x, \Delta y, \Delta z, rot_{6d}, gripper]
+\end{equation}
+
+其中：
+\begin{itemize}[leftmargin=2em]
+    \item $[\Delta x, \Delta y, \Delta z]$：末端位置相对于起始帧的三维位移
+    \item $rot_{6d}$：末端姿态相对于起始帧的旋转变化，使用6D表示（两个3维向量）
+    \item $gripper$：夹爪开合状态（归一化后的宽度）
+\end{itemize}
+
+\textbf{关键设计选择}：
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{相对位移}：使用相对于起始帧的增量，而非绝对坐标或上一帧增量
+    \item \textbf{6D旋转表示}：采用6维旋转表示（参考Zhou等人2019\cite{zhou2019continuity}），避免万向锁问题，连续性更好
+    \item \textbf{归一化}：对位移量进行z-score归一化，使其分布在合理范围（约$\pm$2）
+    \item \textbf{Gripper处理}：遥操数据使用脉冲信号，无本体数据使用连续宽度值，统一归一化到$[-1, 1]$
+\end{enumerate}
+
+\textbf{实现细节}：
+\begin{itemize}[leftmargin=2em]
+    \item 每个episode的第一帧Action为0（相对于自身的位移为0）
+    \item 使用LeRobot的action存储下一帧的状态，解决chunk第一帧为0的问题
+    \item 归一化时跳过gripper维度（第10维），使用原始值
+\end{itemize}
+
+\subsubsection{方案有效性验证}
+
+该Action表示方案在实验中表现出良好的效果：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{单臂任务}：拿放杯子任务400条数据达到90\%成功率
+    \item \textbf{跨平台泛化}：FastUMI和XV平台均能使用相同表示
+    \item \textbf{训练稳定性}：相比绝对坐标表示，训练过程更稳定，收敛更快
+    \item \textbf{部署可靠性}：部署时机械臂执行流畅，无明显抖动或偏差
+\end{itemize}
+
+这一方案创新性地解决了无本体采集缺乏固定坐标系的问题，是无本体数据能够有效用于训练的关键技术之一。
+
+\subsection{训练策略与部署}
+
+\subsubsection{微调配置}
+
+基于LeRobot数据集\cite{lerobot2024}，使用π0.5模型\cite{pi0_5_2025}进行微调：
+
+\textbf{模型配置}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{预训练模型}：π0.5\cite{pi0_2024}（大规模预训练的VLA模型）
+    \item \textbf{输入}：纯图像（224×224分辨率，RGB）
+    \item \textbf{输出}：Relative Action（10维：3维位移+6维旋转+1维夹爪）
+    \item \textbf{Action维度}：32（pi0.5原生使用32维动作）
+    \item \textbf{Action Horizon}：10（预测未来10步的动作）
+\end{itemize}
+
+\textbf{训练配置}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{优化器}：AdamW
+    \item \textbf{学习率}：5e-5（带warmup和cosine decay）
+    \item \textbf{Warmup步数}：1,000步
+    \item \textbf{训练步数}：20,000步
+    \item \textbf{批次大小}：16-128（根据GPU资源和数据量调整）
+    \item \textbf{保存间隔}：2,000步
+    \item \textbf{训练时间}：约11-13小时（单卡A100/4090）
+\end{itemize}
+
+\textbf{归一化配置}：
+\begin{itemize}[leftmargin=2em]
+    \item 使用z-score归一化
+    \item 归一化统计量（mean, std）从训练数据计算
+    \item 跳过gripper维度的归一化（使用原始值）
+\end{itemize}
+
+\subsubsection{策略服务部署}
+
+训练好的模型部署为实时策略服务：
+
+\textbf{服务架构}：
+\begin{itemize}[leftmargin=2em]
+    \item 基于WebSocket的实时推理服务
+    \item 输入：当前相机图像（RGB，224×224）
+    \item 输出：预测的动作序列（10步Relative Action）
+    \item 推理速度：约10-15fps，满足实时控制需求
+\end{itemize}
+
+\textbf{部署流程}：
+\begin{enumerate}[leftmargin=2em]
+    \item 从服务器下载训练好的模型权重（checkpoint）
+    \item 在本地4090台式机启动策略服务（serve\_policy.py）
+    \item 启动RealRL机器人控制服务（robot server）
+    \item 启动评测客户端（eval\_policy.sh）
+    \item 策略接收图像，输出动作，机械臂执行
+\end{enumerate}
+
+\textbf{关键参数}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{控制频率}：10Hz（与训练时降采样频率一致）
+    \item \textbf{动作平滑}：使用chunk内的动作序列，减少抖动
+    \item \textbf{安全阈值}：设置动作幅值限制，防止机械臂碰撞
+\end{itemize}
+
+\subsubsection{训练过程中的问题与解决}
+
+\textbf{问题一：Loss下降但部署效果差}
+\begin{itemize}[leftmargin=2em]
+    \item 现象：训练loss正常下降到0.08，但部署时机械臂动作异常
+    \item 原因：归一化方法选择不当（quantile vs z-score）
+    \item 解决：改用z-score归一化，效果明显改善
+\end{itemize}
+
+\textbf{问题二：Rotation表示选择}
+\begin{itemize}[leftmargin=2em]
+    \item 现象：使用3D轴角表示时，旋转维度学习效果差
+    \item 原因：轴角表示存在不连续性问题（万向锁）
+    \item 解决：改用6D旋转表示，训练更稳定
+\end{itemize}
+
+\textbf{问题三：Gripper控制}
+\begin{itemize}[leftmargin=2em]
+    \item 现象：夹爪开合时机不准确，提前松手或未及时闭合
+    \item 原因：gripper维度的归一化方式与其他维度不同
+    \item 解决：归一化时skip gripper维度，使用原始宽度值
+\end{itemize}
+
+\textbf{问题四：数据分布差异}
+\begin{itemize}[leftmargin=2em]
+    \item 现象：不同采集者数据训出模型效果差异大
+    \item 原因：操作速度和风格不同导致数据分布偏移
+    \item 解决：统一采集规范，增加数据筛选，混合多批次数据训练
+\end{itemize}
+
+\subsection{从采集到部署的闭环}
+
+完整的流程形成闭环：
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{数据采集}：FastUMI/XV + 第三视角相机（D435或Nano）
+    \item \textbf{本地处理}：rosbag→mp4+json，可视化检查，剔除异常
+    \item \textbf{上传服务器}：压缩数据，scp上传到eva14服务器
+    \item \textbf{服务器处理}：解压→LeRobot格式→计算归一化统计量→数据筛选
+    \item \textbf{模型微调}：基于LeRobot数据，π0.5微调20,000步
+    \item \textbf{模型下载}：checkpoint下载到本地4090
+    \item \textbf{策略部署}：启动WebSocket策略服务
+    \item \textbf{评测执行}：机械臂执行任务，记录成功率
+\end{enumerate}
+
+这一闭环流程经过多次迭代优化，现已稳定可靠，支持快速迭代实验。
+
+\subsection{本章小结}
+
+本章针对无本体数据的信息嵌入问题，主要贡献包括：
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{输入设计}：发现纯图像输入优于显式State输入的反直觉结论，简化了系统设计
+    \item \textbf{状态表示}：探索了ArUco码方案，最终采用纯图像方案
+    \item \textbf{Action表示}：创新性地提出Relative Action方案，解决无本体采集缺乏固定baselink的核心问题
+    \item \textbf{训练部署}：建立了完整的训练-部署流程，解决了归一化、旋转表示、gripper控制等关键问题
+\end{enumerate}
+
+这些技术方案共同支撑了无本体数据的有效利用，是实现完整pipeline的关键。
+

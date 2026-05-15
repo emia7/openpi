@@ -888,6 +888,10 @@ class LeRobotXVDualDataConfig(DataConfigFactory):
 
                         # prompt/task
                         "task": "task",
+
+                        # indices for offline analysis / QC (passed through XVDualInputs)
+                        "episode_index": "episode_index",
+                        "frame_index": "frame_index",
                     }
                 )
             ]

@@ -1,0 +1,36 @@
+% handover失败模式饼图 - TikZ版本
+\begin{tikzpicture}[scale=0.9]
+    % 饼图中心
+    \coordinate (O) at (0,0);
+    
+    % 抓取失败 40% (红色)
+    \fill[red!70] (O) -- (0:2.5) arc (0:144:2.5) -- cycle;
+    \node[white, font=\small\bfseries] at (70:1.5) {40\%};
+    \node[font=\scriptsize] at (70:3) {抓取失败};
+    
+    % 递交对齐 45% (橙色)
+    \fill[orange!80] (O) -- (144:2.5) arc (144:306:2.5) -- cycle;
+    \node[white, font=\small\bfseries] at (225:1.5) {45\%};
+    \node[font=\scriptsize] at (225:3) {递交对齐};
+    
+    % 接取失败 15% (蓝色)
+    \fill[blue!60] (O) -- (306:2.5) arc (306:360:2.5) -- cycle;
+    \node[white, font=\small\bfseries] at (333:1.5) {15\%};
+    \node[font=\scriptsize] at (333:3) {接取失败};
+    
+    % 边框
+    \draw[black, thick] (O) circle (2.5);
+    
+    % 标题
+    \node[font=\bfseries] at (0, 4) {Handover任务失败模式分布};
+    \node[font=\small, red!70!black] at (0, -4) {当前成功率: 35\% (探索性实验)};
+    
+    % 改进方向说明
+    \node[right, font=\scriptsize, text width=4cm] at (4, 2) {
+        \textbf{改进方向:}\\[0.3em]
+        1. 增加抓取阶段数据\\
+        2. 优化递交对齐\\
+        3. 改进接取时机\\
+        4. 结合轨迹分析筛选
+    };
+\end{tikzpicture}

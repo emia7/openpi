@@ -1,0 +1,125 @@
+% 清华大学本科毕业论文封面
+\thispagestyle{empty}
+\begin{center}
+
+\vspace*{2cm}
+
+{\zihao{-0}\heiti 清华大学}
+
+\vspace{0.5cm}
+
+{\zihao{2}\heiti 本科生综合论文训练}
+
+\vspace{2cm}
+
+{\zihao{2}\heiti 具身智能无本体采集\\[0.3cm]模仿学习方法研究}
+
+\vspace{3cm}
+
+\begin{tabular}{rl}
+\zihao{4}\heiti 院\hspace{2em}系：&\zihao{4} 电子工程系 \\[0.8cm]
+\zihao{4}\heiti 专\hspace{2em}业：&\zihao{4} 电子信息科学与技术 \\[0.8cm]
+\zihao{4}\heiti 学生姓名：&\zihao{4} 陈帅文 \\[0.8cm]
+\zihao{4}\heiti 学\hspace{2em}号：&\zihao{4} 2022010701 \\[0.8cm]
+\zihao{4}\heiti 指导教师：&\zihao{4} XXX教授 \\[0.8cm]
+\end{tabular}
+
+\vfill
+
+{\zihao{4} 2026年6月}
+
+\end{center}
+
+\newpage
+
+% 声明页
+\thispagestyle{empty}
+\begin{center}
+{\zihao{3}\heiti 关于学位论文使用授权的说明}
+\end{center}
+
+\vspace{1.5cm}
+
+\zihao{4}
+
+本人完全了解清华大学有关保留、使用学位论文的规定，即：
+
+清华大学拥有在著作权法规定范围内学位论文的使用权，其中包括：
+（1）已获学位的研究生必须按学校规定提交学位论文，学校可以采用影印、
+缩印或其他复制手段保存研究生上交的学位论文；（2）为教学和科研目的，
+学校可以将公开的学位论文作为资料在图书馆、资料室等场所供校内师生阅读，
+或在校园网上供校内师生浏览部分内容；（3）根据《中华人民共和国学位条例
+暂行实施办法》，向国家图书馆报送可以公开的学位论文。
+
+本人保证遵守上述规定。
+
+\vspace{2cm}
+
+\begin{flushright}
+（保密的论文在解密后应遵守此规定）
+
+\vspace{1cm}
+
+论文作者签名：\underline{\hspace{4cm}}\hspace{2em}日期：\underline{\hspace{3cm}}
+
+\vspace{0.5cm}
+
+指导教师签名：\underline{\hspace{4cm}}\hspace{2em}日期：\underline{\hspace{3cm}}
+\end{flushright}
+
+\newpage
+
+% 摘要页（中文）
+\setcounter{page}{1}
+\pagenumbering{Roman}
+
+\begin{center}
+{\zihao{3}\heiti 摘\hspace{1em}要}
+\end{center}
+
+\vspace{0.5cm}
+
+\zihao{-4}
+
+具身智能的发展高度依赖于大规模、高质量的机器人交互数据，但传统的遥操作采集方法依赖昂贵的机器人本体，难以满足数据规模化的需求。无本体数据采集方案提供了一种低成本、可扩展的替代路径，但其在数据采集、质量控制和策略训练等方面仍面临挑战。
+
+本研究围绕"无本体的数据能否有效用于模仿学习"这一核心问题，构建了一套完整的无本体双臂采集-训练-部署系统，解决了三个关键技术挑战：
+
+（1）视角矛盾问题：针对长程任务的全局视野需求，我们系统评估了多种第三视角相机方案，最终采用D435固定方案与DJI Nano头戴方案双线并进。针对Nano无线录制的同步难题，创新性地设计了双音chirp标定同步方案，实现$<$33ms的同步精度。
+
+（2）噪声干扰问题：针对数据质量问题，建立了完整的预处理流水线（格式转换、降采样、时间对齐），设计了10条CHECK规则的数据筛选机制，并实施了轨迹相似性分析、HSIC依赖性分析和VLM表征分析等多种质量验证方法。
+
+（3）信息嵌入问题：针对无本体数据缺乏固定坐标系的挑战，创新性地设计了Relative Action表示方案，解决无本体采集没有固定baselink的核心难题，使无本体数据能够有效用于策略训练。
+
+实验验证了系统的有效性。在单臂pick-place任务上，400条数据达到90\%成功率，接近Franka遥操作的100\%，验证了跨平台泛化能力。反直觉地发现纯图像输入方案（90\%）优于图像+显式状态输入（75\%）。以handover任务作为双臂验证场景，初步验证了双臂协调的可行性，并分析了抓取失败、对齐失败、接取失败三类主要失败模式。
+
+\vspace{0.5cm}
+\noindent\textbf{关键词：}具身智能；无本体采集；模仿学习；双臂协调；数据质量控制
+
+\newpage
+
+% Abstract（英文）
+\begin{center}
+{\zihao{3}\heiti Abstract}
+\end{center}
+
+\vspace{0.5cm}
+
+\zihao{-4}
+
+The development of embodied AI heavily relies on large-scale, high-quality robot interaction data. However, traditional teleoperation collection methods depend on expensive robot hardware, making it difficult to meet the demands of data scaling. Embodiment-free data collection offers a low-cost, scalable alternative, but still faces challenges in data acquisition, quality control, and policy training.
+
+This study addresses the core question of "Can embodiment-free data be effectively used for imitation learning?" by constructing a complete embodiment-free bimanual data collection-training-deployment system, solving three key technical challenges:
+
+(1) Perspective conflict: To meet the global vision requirement of long-range tasks, we systematically evaluate multiple third-view camera solutions, adopting both D435 fixed and DJI Nano head-mounted options. For Nano's wireless recording synchronization challenge, we innovatively design a dual-tone chirp calibration synchronization scheme, achieving $<$33ms synchronization accuracy.
+
+(2) Noise interference: Regarding data quality issues, we establish a complete preprocessing pipeline (format conversion, downsampling, time alignment), design a 10-CHECK-rule data filtering mechanism, and implement multiple quality verification methods including trajectory similarity analysis, HSIC dependence analysis, and VLM representation analysis.
+
+(3) Information embedding: Addressing the challenge of embodiment-free data lacking fixed coordinate systems, we innovatively design the Relative Action representation scheme, solving the core problem of embodiment-free collection without fixed baselink, enabling effective use of embodiment-free data for policy training.
+
+Experiments validate the system's effectiveness. On the single-arm pick-place task, 400 demonstrations achieve 90\% success rate, close to the 100\% of Franka teleoperation baseline, demonstrating cross-platform generalization. Counter-intuitively, we find that pure image input (90\%) outperforms image with explicit state input (75\%). Using the handover task as a bimanual validation scenario, we preliminary verify the feasibility of bimanual coordination and analyze three main failure modes: grasping failure, alignment failure, and receiving failure.
+
+\vspace{0.5cm}
+\noindent\textbf{Keywords:} Embodied AI; Embodiment-free Collection; Imitation Learning; Bimanual Coordination; Data Quality Control
+
+\newpage

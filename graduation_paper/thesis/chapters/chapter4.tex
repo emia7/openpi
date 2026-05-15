@@ -1,0 +1,490 @@
+% 第4章 数据处理与质量验证
+\section{数据处理与质量验证}
+
+\subsection{引言：噪声数据的挑战}
+
+原始采集的数据不可避免地包含异常片段，如操作失误、同步错误、设备故障等。这些"噪声数据"如果不加处理直接用于训练，会干扰策略学习，降低最终性能。本章针对"模仿学习中噪声数据的干扰问题"，系统介绍数据预处理技术、筛选机制和质量验证方法。
+
+\subsection{数据预处理}
+
+数据预处理是实现采集到训练闭环的基础环节，包含格式转换、降采样和时间对齐等关键技术。
+
+\subsubsection{格式转换：rosbag到mp4+json}
+
+原始数据以rosbag格式存储，包含ROS topic的时间序列数据。为降低存储开销和提升后续处理效率，我们将其转换为mp4视频+json轨迹的格式。
+
+\textbf{转换流程}：
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{图像编码}：读取图像topic，编码为mp4视频文件（H.264编码，质量预设medium）
+    \item \textbf{轨迹提取}：读取夹爪状态和位姿topic，保存为json格式
+    \item \textbf{时间戳保留}：提取时间戳信息，建立图像帧与状态记录的对应关系
+    \item \textbf{元数据记录}：记录采集者、任务类型、设备信息、原始帧率等
+\end{enumerate}
+
+\textbf{存储优化效果}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{压缩比}：rosbag到mp4+json的压缩比约为10:1
+    \item \textbf{存储节省}：每小时原始数据约130GB（rosbag，60Hz双目+RGB），转换后约13GB
+    \item \textbf{处理效率}：mp4格式便于视频解码，提升训练时数据加载速度（使用imageio迭代器流式读取）
+    \item \textbf{可视化友好}：mp4可直接播放，便于人工检查数据质量
+\end{itemize}
+
+\textbf{实现细节}：
+\begin{itemize}[leftmargin=2em]
+    \item 使用OpenCV或ffmpeg进行视频编码
+    \item json格式包含：records数组（每帧的pose、clamp、timestamp）、fps、source等
+    \item pose字段：7维[x, y, z, qx, qy, qz, qw]（位置+四元数）
+    \item clamp字段：夹爪宽度（mm）或脉冲信号（遥操数据）
+\end{itemize}
+
+\subsubsection{降采样：提升学习效率}
+
+原始采集数据通常为60fps（FastUMI/XV设备），但策略学习不需要如此高的时间分辨率。过高的帧率会引入冗余信息，增加计算负担，甚至导致策略难以收敛。
+
+\textbf{降采样策略}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{目标帧率}：从60fps降至10fps（每6帧取1帧）
+    \item \textbf{降采样方法}：均匀采样，保持时间间隔一致
+    \item \textbf{stride计算}：$stride = round(orig\_fps / target\_fps)$，实际帧率 $achieved\_fps = orig\_fps / stride$
+\end{itemize}
+
+\textbf{效果分析}：
+\begin{itemize}[leftmargin=2em]
+    \item 数据量减少83\%（从60fps到10fps），显著降低存储和计算成本
+    \item 去除冗余帧，策略更容易学习关键动作（如抓取、放置的临界点）
+    \item 保持足够的时间精度（100ms间隔），满足操作需求
+    \item 训练时batch\_size可设置更大（16-128），提升训练效率
+\end{itemize}
+
+\textbf{实验验证}：
+\begin{itemize}[leftmargin=2em]
+    \item 对比10Hz和20Hz：10Hz在拿放杯子任务上效果更好，模型更容易收敛
+    \item 过高帧率（20Hz+）会导致模型学习过多细微动作，反而降低泛化能力
+\end{itemize}
+
+\subsubsection{时间对齐}
+
+双臂数据的时间对齐是确保协调性的关键步骤。
+
+\textbf{对齐流程}：
+\begin{enumerate}[leftmargin=2em]
+    \item 以较短时间序列为基准（避免插值引入误差）
+    \item 对较长序列进行线性插值或截断
+    \item 确保左右臂每一帧时间戳差异小于33ms（对应30fps帧间隔）
+    \item 标记同步误差过大的片段（$>$50ms）
+\end{enumerate}
+
+\textbf{异常处理}：
+\begin{itemize}[leftmargin=2em]
+    \item 时间戳差异$>$50ms的帧标记为同步异常
+    \item 同步异常率$>$5\%的episode建议剔除
+    \item 对于Nano数据，使用chirp标定的时间戳进行硬对齐
+\end{itemize}
+
+\subsection{数据筛选机制}
+
+\subsubsection{筛选规则设计}
+
+基于实验过程中的经验总结和大量调试，我们设计了10条CHECK规则用于数据质量评估。这些规则分为三个严重级别：
+
+\begin{table}[htbp]
+\centering
+\caption{数据质量筛选规则体系}
+\label{tab:check_rules}
+\begin{tabular}{clp{5.5cm}cc}
+\toprule
+规则编号 & 检测维度 & 异常判定条件 & 严重程度 & 优先级 \\
+\midrule
+R01 & 文件完备性 & 缺少关键数据文件（视频/轨迹/元数据） & 致命 & 最高 \\
+R02 & 序列长度 & 帧数低于正常范围的30\%（如$<$20帧） & 警告 & 中等 \\
+R03 & 格式一致性 & 同批次数据分辨率/格式不统一 & 警告 & 中等 \\
+R04 & 时间同步 & 单臂数据缺失或双臂时差$>$50ms & 致命 & 高 \\
+R05 & 运动停滞 & 连续多帧无明显位移（$<$0.001m）或高比例静止 & 警告 & 中等 \\
+R06 & 位移异常 & 单步移动距离$>$0.1m或旋转角度$>$0.5rad & 警告 & 中等 \\
+R07 & 轨迹退化 & 整体运动范围过小（全程位移$<$0.05m） & 警告 & 中等 \\
+R08 & 数据缺失 & 单臂有效帧数极少（$<$10帧） & 致命 & 最高 \\
+R09 & 终点跳变 & 轨迹末尾出现非预期大位移（$>$0.05m） & 警告 & 中等 \\
+R10 & 执行器状态 & 夹爪开合动作不充分（全程变化$<$10mm） & 轻微 & 低 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{规则设计思路}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{致命级别}：直接导致数据不可用的问题（文件缺失、同步失败）
+    \item \textbf{警告级别}：可能影响训练效果的问题（运动异常、轨迹退化）
+    \item \textbf{轻微级别}：对训练影响较小的问题（夹爪开合不充分）
+\end{itemize}
+
+\subsubsection{筛选流程与实施}
+
+筛选流程自动化执行上述规则：
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{批量扫描}：遍历数据集所有episode，逐项执行CHECK规则
+    \item \textbf{分级标记}：根据规则级别标记数据（致命/警告/轻微）
+    \item \textbf{自动剔除}：致命级别数据自动剔除，不参与训练
+    \item \textbf{人工复核}：警告级别数据生成HTML可视化报告供人工复核
+\end{enumerate}
+
+\textbf{人工复核工具}：
+\begin{itemize}[leftmargin=2em]
+    \item 浏览器端可视化界面，显示每条轨迹的视频和关键统计量
+    \item 支持标记"删除"、"保留"、"待定"
+    \item 批量操作支持（同批次相似异常可一键处理）
+\end{itemize}
+
+\textbf{工程实践价值}：
+
+本研究建立了数据筛选流程并应用于实际数据采集。筛选机制能够识别明显的录制异常（如设备掉线、同步失败等），在handover数据集上剔除约6\%的离群数据。对于微妙的数据质量问题（如操作不够流畅），规则筛选的效果有限，需要结合第4.3节的可视化分析方法进一步评估。
+
+\subsection{数据质量可视化分析}
+
+为多角度验证数据质量，我们实施了轨迹相似性分析和图像-动作依赖性分析。这些方法不仅用于筛选，也用于理解数据分布和指导采集策略。
+
+\subsubsection{轨迹相似性分析}
+
+轨迹相似性分析用于识别数据中的主要操作模式和离群轨迹。
+
+\textbf{方法}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{DTW距离}\cite{berndt1994dtw,mueller2007dtw}：动态时间规整距离，衡量两条轨迹的相似程度，允许时间轴的非线性对齐
+    \item \textbf{层次聚类}\cite{schubert2017clustering}：基于DTW距离矩阵，使用凝聚式聚类识别主要操作模式
+    \item \textbf{离群检测}：识别与主流模式差异过大的轨迹（距离$>$3倍中位数）
+\end{itemize}
+
+\textbf{实施结果}（handover任务数据集，约80条演示轨迹）：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{模式识别}：识别出3个主要轨迹模式簇
+    \begin{itemize}
+        \item 簇A（约45\%）：标准的左递右接模式，轨迹平滑
+        \item 簇B（约35\%）：双手同时移动的对称模式，同步性好
+        \item 簇C（约20\%）：其他变体或需要更多步骤的复杂模式
+    \end{itemize}
+    \item \textbf{离群检测}：识别出5条异常轨迹（约6\%）
+    \begin{itemize}
+        \item 原因：操作失误（中途掉落物品）、录制问题（设备抖动）、非标准操作
+        \item 处理：经人工复核后剔除，避免噪声干扰训练
+    \end{itemize}
+\end{itemize}
+
+\textbf{实际指导价值}：
+\begin{itemize}[leftmargin=2em]
+    \item 识别出数据分布的主要模式，指导后续采集应侧重哪些风格
+    \item 发现离群数据，及时剔除避免干扰训练
+    \item 验证数据多样性，确保覆盖不同操作方式
+\end{itemize}
+
+\subsubsection{图像-动作依赖性分析}
+
+图像-动作依赖性分析用于衡量视觉观测与执行动作之间的统计关联强度，评估数据的可学习性。
+
+\textbf{方法}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{HSIC}\cite{gretton2005hsic}：希尔伯特-施密特独立性准则，衡量两个变量（图像特征、动作特征）的统计依赖性
+    \item \textbf{特征提取}：
+    \begin{itemize}
+        \item 图像特征：使用SigLIP\cite{siglip2023}预训练模型提取，768维
+        \item 动作特征：PCA降维至10维（保留95\%方差）
+    \end{itemize}
+    \item \textbf{结果解读}：HSIC值越高，表示图像与动作关联越强，策略越容易学习
+\end{itemize}
+
+\textbf{实施结果}：
+
+\begin{table}[htbp]
+\centering
+\caption{不同任务类型的图像-动作依赖性分析结果}
+\label{tab:hsic_results}
+\begin{tabular}{lccc}
+\toprule
+数据集（任务类型） & HSIC值 & 样本数 & 分析 \\
+\midrule
+bagging\_0430（放置） & 0.00456 & 512 & 依赖性较低 \\
+handover\_umi\_0429（交接） & 0.02451 & 512 & 依赖性显著 \\
+duck\_0430（抓取） & 0.01865 & 512 & 依赖性中等 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{关键发现与指导意义}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{任务类型差异显著}：交接类任务（handover，HSIC=0.025）的依赖性明显高于放置类任务（bagging，HSIC=0.005），说明交接任务中策略需要从视觉输入中提取更多空间关系信息
+    \item \textbf{数据需求解释}：较高的HSIC值意味着策略需要学习更复杂的映射关系，这也解释了为何handover任务需要比单臂任务更多的数据支持（600条 vs 200条）
+    \item \textbf{数据质量指标}：HSIC值可作为数据质量评估的参考，过低（$<$0.001）可能表示"僵死"数据（动作与图像无关）
+    \item \textbf{采集策略指导}：对于HSIC值高的任务，应注重采集多样性；对于HSIC值低的任务，应注重动作一致性
+\end{itemize}
+
+\subsubsection{VLM表征空间分析}
+
+为深入理解不同数据源（遥操 vs 无本体）和不同任务类型在模型内部表征空间中的分布特性，我们开展了基于VLM（Vision-Language Model）的表征分析。该方法参考Physical Intelligence《Emergence of Human to Robot Transfer》附录C的做法，通过分析微调后模型的内部表征，揭示数据域之间的相似性与差异性。
+
+\textbf{分析方法}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{特征提取}：使用微调后的π0.5模型，提取VLM（PaliGemma language\_model）最后一层输出
+    \item \textbf{池化策略}：对prefix前K个token（K≈200）做mean-pool，得到2048维表征向量
+    \item \textbf{降维可视化}：使用PCA、t-SNE、UMAP将高维表征降至2D进行可视化
+    \item \textbf{分离度度量}：计算不同数据组质心间的L2距离，量化域间差异
+\end{itemize}
+
+\textbf{实验设置}：
+我们对比了以下数据组在VLM表征空间中的分布（每组64个样本）：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{umi\_model\_robot\_data}：使用UMI微调模型前向提取的遥操数据表征
+    \item \textbf{umi\_model\_umi\_data}：使用UMI微调模型前向提取的无本体handover数据表征
+    \item \textbf{umi\_model\_umi\_other\_data}：使用UMI微调模型前向提取的无本体duck（抓取）数据表征
+    \item \textbf{umi\_model\_umi\_bagging\_data}：使用UMI微调模型前向提取的无本体bagging（放置）数据表征
+\end{itemize}
+
+\textbf{表征分离度分析结果}：
+
+\begin{table}[htbp]
+\centering
+\caption{VLM表征空间中的组间分离度（质心L2距离）}
+\label{tab:vlm_separation}
+\begin{tabular}{lc}
+\toprule
+数据组对比 & 质心L2距离 \\
+\midrule
+遥操数据 vs UMI handover数据 & 2.79 \\
+遥操数据 vs UMI抓取数据 & 7.09 \\
+遥操数据 vs UMI放置数据 & 5.20 \\
+UMI handover vs UMI抓取 & 7.18 \\
+UMI handover vs UMI放置 & 5.86 \\
+UMI抓取 vs UMI放置 & 3.31 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{组内分布分析}：
+\begin{table}[htbp]
+\centering
+\caption{各数据组内部到质心的平均距离（表征紧凑性）}
+\label{tab:vlm_compactness}
+\begin{tabular}{lcc}
+\toprule
+数据组 & 平均距离 & 标准差 \\
+\midrule
+遥操数据 & 3.90 & 1.04 \\
+UMI handover数据 & 6.29 & 2.06 \\
+UMI抓取数据 & 4.24 & 1.70 \\
+UMI放置数据 & 4.07 & 1.58 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{关键发现}：
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{遥操与UMI数据存在明显分离}：即使使用相同的UMI微调模型，遥操数据和UMI无本体数据在表征空间中仍呈现不同的分布区域（质心距离2.79），说明两类数据采集域的固有差异在模型内部仍有体现
+    
+    \item \textbf{不同任务类型表征差异显著}：
+    \begin{itemize}
+        \item 抓取任务（duck）与handover任务分离度最高（7.18），说明两类任务在视觉特征上差异最大
+        \item 放置任务（bagging）与handover任务分离度中等（5.86），体现了不同操作类型的内在差异
+        \item 抓取与放置任务相对接近（3.31），均为单臂操作，视觉场景相似
+    \end{itemize}
+    
+    \item \textbf{遥操数据表征更紧凑}：遥操数据组内到质心的平均距离（3.90）明显小于UMI handover数据（6.29），标准差也更小（1.04 vs 2.06），说明遥操数据采集更标准化、一致性更高
+    
+    \item \textbf{UMI数据分布更分散}：UMI handover数据的组内距离和方差都较大，反映了无本体采集过程中操作者动作风格的多样性，这也解释了为何需要更多数据量来达到稳定性能
+\end{enumerate}
+
+\textbf{PCA方差解释}：
+\begin{itemize}[leftmargin=2em]
+    \item 第一主成分解释64.2\%的方差
+    \item 第二主成分解释7.2\%的方差
+    \item 前两维累计解释71.4\%的方差，说明2D可视化能够较好地反映原始高维空间的结构
+\end{itemize}
+
+\textbf{可视化结果解读}：
+\begin{itemize}[leftmargin=2em]
+    \item t-SNE和UMAP降维结果均显示，不同数据组形成了可区分的聚类
+    \item 遥操数据点分布相对集中，呈紧凑团状
+    \item UMI无本体数据分布较分散，不同任务（抓取、放置、交接）形成不同区域
+    \item 这种分离模式为理解模型的域适应性提供了直观依据
+\end{itemize}
+
+\textbf{指导意义}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{数据混合策略}：表征空间的可分离性支持了混合遥操和UMI数据进行训练的策略，模型能够学习到跨域的共享表征
+    \item \textbf{任务分类洞察}：不同任务类型在表征空间中的分布差异，为后续的多任务学习提供了特征层面的依据
+    \item \textbf{数据质量评估}：表征紧凑性可作为数据一致性的量化指标，辅助筛选高质量数据子集
+\end{itemize}
+
+\subsubsection{多视角（三视角）嵌入一致性分析}
+
+除了上述基于轨迹和图像-动作依赖性的分析方法外，我们还开发了多视角嵌入一致性分析方法，用于评估同一时刻三路相机（左腕、右腕、第三视角）在语义嵌入空间中的一致性，以及单路相机在时间序列上的连续性。
+
+\textbf{分析动机}：
+\begin{itemize}[leftmargin=2em]
+    \item 三路相机（左腕、右腕、第三视角）应该观察到同一场景的不同视角
+    \item 如果某路相机出现遮挡、黑屏、时间戳错位或极端运动模糊，其嵌入表征会出现异常
+    \item 通过度量三路嵌入的相互一致性和单路时序连续性，可以识别潜在的采集质量问题
+\end{itemize}
+
+\textbf{技术方法}：
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{特征提取}：使用冻结的SigLIP编码器（与训练一致的图像预处理），分别提取左腕（$z_L$）、右腕（$z_R$）、第三视角（$z_B$）的嵌入向量
+    \item \textbf{L2归一化}：对嵌入向量进行归一化，得到$\hat{z}_L, \hat{z}_R, \hat{z}_B$
+    \item \textbf{成对余弦相似度}：计算三路嵌入之间的余弦相似度
+    \begin{itemize}
+        \item 左-右相似度：$c_{LR} = \hat{z}_L \cdot \hat{z}_R$
+        \item 左-Base相似度：$c_{LB} = \hat{z}_L \cdot \hat{z}_B$
+        \item 右-Base相似度：$c_{RB} = \hat{z}_R \cdot \hat{z}_B$
+    \end{itemize}
+    \item \textbf{单路时序连续性}（可选）：计算同一路相机相邻帧的余弦相似度
+    \begin{itemize}
+        \item $s_L = \hat{z}_{L,t} \cdot \hat{z}_{L,t+1}$（同一episode内）
+        \item 同理计算$s_R, s_B$
+    \end{itemize}
+\end{enumerate}
+
+\textbf{重要说明}：
+\begin{itemize}[leftmargin=2em]
+    \item 第三视角与手腕相机视场和内容差异大，\textbf{不得}期待两两余弦"普遍很高"
+    \item 左腕-右腕（$c_{LR}$）通常内容相似（都拍摄手部操作），余弦值相对较高
+    \item 左/右腕-第三视角（$c_{LB}, c_{RB}$）由于视场差异大，余弦绝对值常偏低，属预期
+    \item 本分析依赖三种信号综合判断：
+    \begin{enumerate}
+        \item \textbf{批内相对分位}：与全局分布比较，识别异常低值
+        \item \textbf{同episode内时间突刺}：某帧突然偏离该episode的median
+        \item \textbf{单路时序连续性}：某路相机相邻帧突变，可能为遮挡或跳帧
+    \end{enumerate}
+\end{itemize}
+
+\textbf{异常检测规则}：
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{Episode级异常}：若某episode的$\min(c_{LB})$低于全局p10分位数，或低于该episode内$median - k \cdot MAD$，则标记为异常
+    \item \textbf{Frame级异常}：若某帧的$c_{LB}$或$s_B$的稳健Z-score（robust z-score）超过阈值（默认4.0），则标记为可疑帧
+    \item \textbf{禁止}：使用单一绝对阈值（如"cos < 0.5即坏"）宣布好坏，因为不同相机对之间的基线相似度本就不同
+\end{enumerate}
+
+\textbf{输出指标}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{逐帧指标}：$c_{LR}, c_{LB}, c_{RB}$（及可选的$s_L, s_R, s_B$）写入CSV
+    \item \textbf{分位数统计}：各指标的全局p10/p50/p90
+    \item \textbf{离群标记}：episode和frame级别的异常列表（JSON格式）
+    \item \textbf{直方图}：三路成对余弦的分布可视化
+\end{itemize}
+
+\textbf{应用场景}：
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{标定验证}：检测三路相机时间戳是否对齐（若$c_{LR}$突然下降，可能为同步错位）
+    \item \textbf{遮挡检测}：某路相机被遮挡时，与其他路的余弦相似度会异常下降
+    \item \textbf{坏帧识别}：单路时序连续性$s$突变，可能为黑屏、运动模糊或丢帧
+    \item \textbf{数据筛选补充}：作为10条CHECK规则的补充，从语义嵌入角度识别异常
+\end{enumerate}
+
+\textbf{与几何方法对比}：
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{优势}：无需相机外参标定，纯语义嵌入计算，实现简单
+    \item \textbf{局限}：弱于几何重投影误差（若已知相机标定），仅作为弱信号探针
+    \item \textbf{定位}：不替代标定流程，而是作为数据质检的辅助工具
+\end{itemize}
+
+\subsubsection{数据分布可视化}
+
+除上述分析方法外，我们还实现了多种数据分布可视化工具：
+
+\textbf{Action分布直方图}：
+\begin{itemize}[leftmargin=2em]
+    \item 绘制各维度的分布直方图（位置x/y/z、旋转、夹爪）
+    \item 对比不同批次数据的分布差异
+    \item 发现分布偏移，指导归一化策略选择
+\end{itemize}
+
+\textbf{State分布可视化}：
+\begin{itemize}[leftmargin=2em]
+    \item 绘制TCP位姿的3D分布散点图
+    \item 验证采集是否覆盖足够的工作空间
+    \item 发现采集盲区，指导后续采集补全
+\end{itemize}
+
+\textbf{轨迹3D可视化}：
+\begin{itemize}[leftmargin=2em]
+    \item 绘制末端执行器在3D空间中的运动轨迹
+    \item 叠加多条轨迹，观察一致性
+    \item 标记异常轨迹，辅助人工复核
+\end{itemize}
+
+\subsection{归一化策略与数据增强}
+
+\subsubsection{归一化方法对比}
+
+在训练过程中，我们发现归一化方法对模型性能有显著影响。我们对比了两种归一化方法：
+
+\textbf{Quantile归一化}：
+\begin{equation}
+x_{norm} = \frac{x - q_{01}}{q_{99} - q_{01} + \epsilon} \times 2 - 1
+\end{equation}
+将数据的1\%分位映射到-1，99\%分位映射到+1（线性缩放）。
+
+\textbf{优点}：对heavy-tail/outlier更鲁棒，避免异常值影响整体分布。
+
+\textbf{缺点}：
+\begin{itemize}[leftmargin=2em]
+    \item 改变数据分布形状，可能丢失重要信息
+    \item 显式padding（用0填充）后经过quantile归一化会被拉到-1，导致模型学习偏差
+    \item 在我们的实验中，使用quantile归一化导致部分数据维度（dim00、01、04、06）存在固定bias
+\end{itemize}
+
+\textbf{Z-score归一化}：
+\begin{equation}
+x_{norm} = \frac{x - \mu}{\sigma + \epsilon}
+\end{equation}
+
+\textbf{优点}：
+\begin{itemize}[leftmargin=2em]
+    \item 保留数据分布的相对关系，更适合模仿学习任务
+    \item 显式padding的0在归一化后仍为0（或接近0），不会引入偏差
+    \item 在我们的实验中，改用z-score归一化后，原本训练失败的数据能够正常训练
+\end{itemize}
+
+\textbf{最终选择}：采用z-score归一化作为默认归一化方法。
+
+\subsubsection{数据增强策略}
+
+虽然无本体采集的数据量已经较大（数百条），但我们仍探索了数据增强策略：
+
+\textbf{颜色抖动}：
+\begin{itemize}[leftmargin=2em]
+    \item 对图像进行亮度、对比度、饱和度调整
+    \item 模拟不同光照条件下的采集场景
+\end{itemize}
+
+\textbf{空间扰动}：
+\begin{itemize}[leftmargin=2em]
+    \item 对轨迹进行微小的时间平移（$\pm$2帧）
+    \item 对初始位置进行随机扰动（但保持与图像一致）
+\end{itemize}
+
+\textbf{实际效果}：
+\begin{itemize}[leftmargin=2em]
+    \item 颜色抖动对拿放杯子任务帮助不大（背景固定）
+    \item 初始位置扰动对泛化性有一定帮助，但需谨慎避免与图像不一致
+    \item 总体而言，由于无本体数据量已经较大（200-400条），数据增强的收益有限
+\end{itemize}
+
+\subsection{本章小结}
+
+本章建立了完整的数据处理与质量验证体系，包括：
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{预处理流程}：rosbag到mp4+json格式转换、10fps降采样、时间对齐
+    \item \textbf{筛选机制}：10条CHECK规则自动检测异常，人工复核确保质量
+    \item \textbf{质量分析}：
+    \begin{itemize}
+        \item 轨迹相似性分析识别模式簇和离群数据
+        \item HSIC分析评估图像-动作依赖性
+        \item VLM表征空间分析揭示遥操与UMI数据的域间差异（质心距离2.79）和不同任务类型的表征分离
+        \item 多视角嵌入一致性分析从语义嵌入角度检测三路相机的同步异常、遮挡和坏帧
+    \end{itemize}
+    \item \textbf{归一化策略}：对比quantile和z-score归一化，最终采用z-score
+\end{enumerate}
+
+这些方法和工具不仅用于提升数据质量，也为理解数据分布、指导采集策略提供了量化依据。特别是：
+\begin{itemize}[leftmargin=2em]
+    \item VLM表征分析揭示了遥操数据表征更紧凑（组内距离3.90），UMI数据表征更分散（组内距离6.29），不同任务类型在表征空间中形成可区分的聚类（抓取vs handover分离度7.18），为跨域学习和多任务策略训练提供了特征层面的依据
+    \item 多视角嵌入一致性分析通过度量左腕-右腕-第三视角三路嵌入的余弦相似度和时序连续性，为标定验证、遮挡检测和坏帧识别提供了语义层面的弱信号探针
+\end{itemize}
+

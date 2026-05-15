@@ -1,0 +1,72 @@
+% 第7章 结论与展望
+\section{结论与展望}
+
+\subsection{工作总结}
+
+本研究针对具身智能数据采集中的三个关键问题，构建了一套完整的无本体双臂采集-训练-部署系统，并通过实验验证了其可行性。
+
+\subsubsection{解决视角矛盾：第三视角采集系统}
+
+针对"长程任务需求与采集设备头部视角缺失的矛盾"，我们：
+\begin{itemize}[leftmargin=2em]
+    \item 系统评估了多种第三视角相机方案，最终采用\textbf{D435固定方案}作为主线，\textbf{DJI Nano头戴方案}作为创新探索
+    \item 针对Nano无线录制的同步难题，创新性地设计了\textbf{双音chirp标定同步方案}，实现$<$33ms的同步精度
+    \item 验证了第三视角相机在长程任务中的全局视野价值
+\end{itemize}
+
+\subsubsection{解决噪声干扰：数据处理与质量验证}
+
+针对"模仿学习中噪声数据的干扰问题"，我们：
+\begin{itemize}[leftmargin=2em]
+    \item 建立了\textbf{预处理流水线}：rosbag→mp4+json格式转换（压缩比10:1）、10fps降采样、时间对齐
+    \item 设计了\textbf{10条CHECK规则}的数据筛选机制，剔除约6\%的明显异常数据
+    \item 实施了\textbf{多维度质量分析}：轨迹相似性分析识别3个主要模式簇和离群数据，HSIC分析揭示不同任务的依赖性差异
+\end{itemize}
+
+\subsubsection{解决信息嵌入：无本体数据的有效利用}
+
+针对"无本体数据如何实现信息嵌入"，我们：
+\begin{itemize}[leftmargin=2em]
+    \item 验证了\textbf{纯图像输入方案}的有效性，发现纯图像（90\%）优于显式状态表示（75\%）
+    \item 探索了状态表示方案（ArUco码尝试），最终采用简化的image-only方案
+    \item 创新性地设计了\textbf{Relative Action表示}，解决无本体采集缺乏固定baselink的问题，是无本体数据能够有效用于训练的关键技术
+\end{itemize}
+
+\subsection{主要贡献}
+
+本研究的主要贡献包括：
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{系统贡献}：构建了一套完整的无本体双臂采集-训练-部署系统，覆盖从数据采集、处理、训练到部署的全流程，降低了具身数据采集的硬件门槛
+    
+    \item \textbf{方法创新}：针对头戴相机同步难题，提出双音chirp标定同步方案，实现了无线录制场景下的精确时间对齐
+    
+    \item \textbf{技术突破}：设计Relative Action表示方案，创新性地解决无本体采集缺乏固定坐标系的问题，使无本体数据能够有效用于策略训练
+    
+    \item \textbf{实验验证}：通过多组对比实验验证了系统有效性，单臂pick-place任务达到90\%成功率，双臂handover任务初步验证可行
+\end{enumerate}
+
+\subsection{局限与展望}
+
+\subsubsection{当前局限}
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{数据量需求}：handover等双臂协调任务需要更多数据支持（与HSIC分析一致），当前80条数据难以达到理想的稳定性
+    \item \textbf{任务复杂度}：系统在复杂精细操作上的性能仍有提升空间，handover任务成功率低于单臂任务
+    \item \textbf{泛化能力}：策略的跨场景泛化能力需要进一步验证
+\end{itemize}
+
+\subsubsection{未来研究方向}
+
+\begin{enumerate}[leftmargin=2em]
+    \item \textbf{数据规模化}：扩大handover等复杂任务的数据采集规模，探索数据量-性能关系的边界
+    \item \textbf{策略优化}：研究更精细的双手协调表示方法，提升双臂任务的稳定性和成功率
+    \item \textbf{跨场景验证}：在更多样化的场景和任务中验证系统的泛化能力
+    \item \textbf{人机协作}：探索人机协作采集模式，结合人工监督和自动化采集提升效率
+    \item \textbf{实时性优化}：优化策略推理速度，实现更高频率的实时控制
+\end{enumerate}
+
+\subsection{结语}
+
+本研究构建的无本体双臂采集-训练-部署系统，验证了无本体数据在具身智能研究中的可用性和潜力。通过解决视角矛盾、噪声干扰和信息嵌入三个关键问题，我们证明了一套低成本、可扩展的数据获取路径的可行性，为具身智能的规模化发展提供了技术基础。未来，随着数据采集规模的扩大和策略方法的优化，无本体采集有望在更多复杂场景中得到应用，推动具身智能技术的进一步发展。
+

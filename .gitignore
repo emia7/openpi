@@ -6,6 +6,10 @@ wandb/
 eval_results/
 compare_npz_out/
 
+# representation_analysis: generated PNG/npy/json runs (keep scripts only in git)
+umi_scripts_csw/representation_analysis/analysis_results/*
+!umi_scripts_csw/representation_analysis/analysis_results/.gitkeep
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

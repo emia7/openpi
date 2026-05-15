@@ -14,6 +14,13 @@ Usage:
         --source_dataset ~/Downloads/handover_umi_0429 \\
         --nano_dir ~/path/to/out_freq_dji0429_recut \\
         --output_dataset ~/Downloads/handover_umi_0429_nano
+
+    # nano 片段从 clip_0001 开始时：
+    python replace_third_with_nano_0429.py \\
+        --source_dataset ~/Downloads/bagging_0430 \\
+        --nano_dir ~/path/to/out_freq_dji0430_edited2 \\
+        --output_dataset ~/Downloads/bagging_0430_nano \\
+        --clip_index_base 1
 """
 
 from __future__ import annotations
@@ -167,6 +174,17 @@ def main() -> None:
         default=Path.home() / "Downloads" / "handover_umi_0429_nano",
     )
     ap.add_argument("--dry_run", action="store_true")
+    ap.add_argument(
+        "--clip_index_base",
+        type=int,
+        choices=(0, 1),
+        default=0,
+        help=(
+            "nano clip 编号与 episode 编号对齐方式："
+            "0=episode_N 对应 clip_{N-1}（如 episode_000001→clip_0000，默认）；"
+            "1=episode_N 对应 clip_{N}（如 episode_000001→clip_0001，适用于 clip 从 0001 开始命名）"
+        ),
+    )
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parents[2]
@@ -200,6 +218,7 @@ def main() -> None:
         "source_dataset": str(src),
         "nano_dir": str(nano_dir),
         "output_dataset": str(dst),
+        "clip_index_base": args.clip_index_base,
         "episodes": [],
         "failed": [],
     }
@@ -207,7 +226,7 @@ def main() -> None:
     for jf in tqdm(left_jsons, desc="replace third"):
         stem = jf.stem.replace("_left", "")  # episode_000001
         ep_idx = int(stem.split("_")[1])
-        clip_i = ep_idx - 1
+        clip_i = ep_idx - 1 + args.clip_index_base
         clip_path = nano_dir / f"clip_{clip_i:04d}.mp4"
         left_mp4 = dst / f"{stem}_left.mp4"
         out_third = dst / f"{stem}_third.mp4"

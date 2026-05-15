@@ -56,6 +56,40 @@ def _pose7_to_pose6(pose7: np.ndarray) -> np.ndarray:
     raise NotImplementedError("This policy expects rotvec obs already (left_eef_rotvec/right_eef_rotvec).")
 
 
+def abs_next_targets_to_policy20_row(
+    left_eef_pose6: np.ndarray,
+    right_eef_pose6: np.ndarray,
+    left_action_abs7: np.ndarray,
+    right_action_abs7: np.ndarray,
+) -> np.ndarray:
+    """
+    One timestep of model supervision (20,), matching ``XVDualInputs`` for the first
+    horizon row: absolute next-state (7D per hand) → relative pose9d+grip per hand.
+
+    Current pose must come from ``left_eef_*`` / ``right_eef_*`` (pose6 = pos3+rotvec3),
+    same as the action branch in ``XVDualInputs``.
+    """
+    l6 = np.asarray(left_eef_pose6, dtype=np.float32).reshape(6)
+    r6 = np.asarray(right_eef_pose6, dtype=np.float32).reshape(6)
+    la = np.asarray(left_action_abs7, dtype=np.float32).reshape(7)
+    ra = np.asarray(right_action_abs7, dtype=np.float32).reshape(7)
+
+    l_cur_mat = pose6_to_mat(np.concatenate([l6[:3], l6[3:6]], axis=-1))
+    r_cur_mat = pose6_to_mat(np.concatenate([r6[:3], r6[3:6]], axis=-1))
+
+    left_tgt_mat = pose6_to_mat(np.concatenate([la[:3], la[3:6]], axis=-1))
+    right_tgt_mat = pose6_to_mat(np.concatenate([ra[:3], ra[3:6]], axis=-1))
+
+    left_rel_mat = convert_pose_mat_rep(left_tgt_mat, l_cur_mat, pose_rep="relative", backward=False)
+    right_rel_mat = convert_pose_mat_rep(right_tgt_mat, r_cur_mat, pose_rep="relative", backward=False)
+
+    left_pose9 = mat_to_pose10d(left_rel_mat).astype(np.float32)
+    right_pose9 = mat_to_pose10d(right_rel_mat).astype(np.float32)
+    left_act10 = np.concatenate([left_pose9, la[6:7]], axis=-1)
+    right_act10 = np.concatenate([right_pose9, ra[6:7]], axis=-1)
+    return np.concatenate([left_act10, right_act10], axis=-1).astype(np.float32)
+
+
 @dataclasses.dataclass(frozen=True)
 class XVDualInputs(transforms.DataTransformFn):
     """
@@ -221,6 +255,13 @@ class XVDualInputs(transforms.DataTransformFn):
             inputs["prompt"] = str(data["prompt"])
         elif "task" in data:
             inputs["prompt"] = str(data["task"])
+
+        # Passthrough LeRobot row indices for offline analysis (ignored by model forward).
+        for _k in ("episode_index", "frame_index"):
+            if _k in data:
+                _v = np.asarray(data[_k])
+                if _v.size >= 1:
+                    inputs[_k] = int(_v.reshape(-1)[0])
 
         return inputs
 

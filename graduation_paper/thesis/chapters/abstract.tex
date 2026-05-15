@@ -1,0 +1,49 @@
+% 摘要
+\begin{center}
+{\zihao{3}\heiti 摘\quad 要}
+\end{center}
+\addcontentsline{toc}{section}{摘要}
+
+具身智能的发展高度依赖于大规模、高质量的机器人交互数据，但传统的遥操作采集方法依赖昂贵的机器人本体，难以满足数据规模化的需求。无本体数据采集方案提供了一种低成本、可扩展的替代路径，但其在数据采集、质量控制和策略训练等方面仍面临挑战。
+
+本研究围绕"无本体的数据能否有效用于模仿学习"这一核心问题，构建了一套完整的无本体双臂采集-训练-部署系统，解决了三个关键技术挑战：
+
+\textbf{（1）视角矛盾问题}：针对长程任务的全局视野需求，我们系统评估了多种第三视角相机方案，最终采用D435固定方案与DJI Nano头戴方案双线并进。针对Nano无线录制的同步难题，创新性地设计了双音chirp标定同步方案，实现$<$33ms的同步精度。
+
+\textbf{（2）噪声干扰问题}：针对数据质量问题，建立了完整的预处理流水线（格式转换、降采样、时间对齐），设计了10条CHECK规则的数据筛选机制，并实施了轨迹相似性分析和HSIC依赖性分析两种质量验证方法。
+
+\textbf{（3）信息嵌入问题}：针对无本体数据缺乏固定坐标系的挑战，创新性地设计了Relative Action表示方案，解决无本体采集没有固定baselink的核心难题，使无本体数据能够有效用于策略训练。
+
+实验验证了系统的有效性。在单臂pick-place任务上，400条数据达到90\%成功率，接近Franka遥操作的100\%，XV单臂达到85\%，验证了跨平台泛化能力。反直觉地发现纯图像输入方案（90\%）优于图像+显式状态输入（75\%）。以handover任务作为双臂验证场景，初步验证了双臂协调的可行性。
+
+本研究为低成本具身数据采集提供了可行路径，验证了无本体数据在具身智能研究中的可用性和潜力。
+
+\vspace{1em}
+\noindent\textbf{关键词：}具身智能；无本体采集；模仿学习；双臂协调；数据质量控制
+
+\newpage
+
+% Abstract
+\begin{center}
+{\zihao{3}\heiti Abstract}
+\end{center}
+\addcontentsline{toc}{section}{Abstract}
+
+The development of embodied AI heavily relies on large-scale, high-quality robot interaction data. However, traditional teleoperation collection methods depend on expensive robot hardware, making it difficult to meet the demands of data scaling. Embodiment-free data collection offers a low-cost, scalable alternative, but still faces challenges in data acquisition, quality control, and policy training.
+
+This study addresses the core question of "Can embodiment-free data be effectively used for imitation learning?" by constructing a complete embodiment-free bimanual data collection-training-deployment system, solving three key technical challenges:
+
+\textbf{(1) Perspective conflict}: To meet the global vision requirement of long-range tasks, we systematically evaluate multiple third-view camera solutions, adopting both D435 fixed and DJI Nano head-mounted options. For Nano's wireless recording synchronization challenge, we innovatively design a dual-tone chirp calibration synchronization scheme, achieving $<$33ms synchronization accuracy.
+
+\textbf{(2) Noise interference}: Regarding data quality issues, we establish a complete preprocessing pipeline (format conversion, downsampling, time alignment), design a 10-CHECK-rule data filtering mechanism, and implement two quality verification methods: trajectory similarity analysis and HSIC dependence analysis.
+
+\textbf{(3) Information embedding}: Addressing the challenge of embodiment-free data lacking fixed coordinate systems, we innovatively design the Relative Action representation scheme, solving the core problem of embodiment-free collection without fixed baselink, enabling effective use of embodiment-free data for policy training.
+
+Experiments validate the system's effectiveness. On the single-arm pick-place task, 400 demonstrations achieve 90\% success rate, close to the 100\% of Franka teleoperation baseline, with XV single-arm reaching 85\%, demonstrating cross-platform generalization. Counter-intuitively, we find that pure image input (90\%) outperforms image with explicit state input (75\%). Using the handover task as a bimanual validation scenario, we preliminary verify the feasibility of bimanual coordination.
+
+This study provides a feasible path for low-cost embodied data collection, validating the usability and potential of embodiment-free data in embodied AI research.
+
+\vspace{1em}
+\noindent\textbf{Keywords:} Embodied AI; Embodiment-free Collection; Imitation Learning; Bimanual Coordination; Data Quality Control
+
+\newpage

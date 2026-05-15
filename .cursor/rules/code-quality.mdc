@@ -1,0 +1,225 @@
+---
+description: Code quality, minimal-change policy, anti-slop rules, and practical verification
+alwaysApply: true
+---
+
+# Code Quality Rules
+
+When modifying this codebase, behave like a careful human maintainer familiar with the repository.
+
+Prioritize:
+
+1. Correctness.
+2. Minimal changes.
+3. Consistency with existing code.
+4. Maintainability.
+5. Backward compatibility.
+6. Practical verification without test bloat.
+
+Do not generate code that looks like AI-produced filler, over-engineering, or superficial cleanup.
+
+---
+
+## Minimal-change principle
+
+Prefer the smallest correct change that solves the requested problem.
+
+Before adding new code, first look for existing functions, classes, utilities, config options, patterns, or tests that can be reused or extended.
+
+Avoid:
+
+1. Large rewrites when a local fix is sufficient.
+2. New files when the change naturally belongs in an existing file.
+3. New functions, classes, wrappers, helpers, or config layers for one-off use cases.
+4. Duplicating existing logic instead of reusing or extending it.
+5. Lengthy implementations when a simpler change would work.
+6. Broad refactors mixed into feature work or bug fixes.
+7. Renaming, reformatting, or reorganizing unrelated code.
+8. Changing public APIs, data formats, configs, CLI behavior, checkpoint formats, or external behavior unless explicitly required.
+
+Backward compatibility must be preserved by default. Existing callers, configs, tests, checkpoints, scripts, and workflows should continue to work unless the task explicitly requires a breaking change.
+
+If a breaking change is intentional, make it explicit and document:
+
+1. What behavior is changed.
+2. Why the change is necessary.
+3. Which callers or workflows may be affected.
+4. Whether a migration path or compatibility shim is needed.
+
+When in doubt, choose the smaller diff.
+
+---
+
+## Anti-slop rules
+
+Do not introduce AI-generated slop. Code should look like it was written by a careful human maintainer.
+
+Avoid the following:
+
+1. Extra comments that a human maintainer would not add, or comments that are inconsistent with the surrounding file style.
+2. Extra defensive checks, guards, fallback branches, or try/catch blocks that are abnormal for that area of the codebase, especially on trusted or already-validated code paths.
+3. Type escapes such as `any`, unsafe casts, or suppressions used only to bypass the type system or linter.
+4. Variables that are declared and then used only once immediately afterward. Prefer inlining the right-hand side unless naming materially improves readability.
+5. Style, abstraction, naming, formatting, or control flow that is inconsistent with the surrounding file.
+6. Imports inside functions or methods. Put regular imports at the top of the file. Local imports are allowed only to avoid circular imports or for truly lazy, optional, or heavy dependencies. In those cases, add a short comment explaining why the local import is necessary.
+7. Emojis, decorative text, overly casual comments, or AI-assistant-style phrasing.
+8. Unnecessary helper functions, wrapper classes, adapters, registries, factories, or configuration layers.
+9. Dead code, commented-out code, unused variables, unused imports, temporary debug logs, or leftover TODOs.
+10. Broad exception handling that hides real failures.
+11. Fallback behavior that silently changes semantics.
+12. Reformatting unrelated code.
+13. Touching unrelated files.
+14. Making speculative improvements not requested by the task.
+
+Prefer code that is boring, direct, and consistent with nearby code.
+
+---
+
+## Reuse existing patterns
+
+Before implementing, inspect the surrounding code and reuse the existing style.
+
+Look for:
+
+1. Similar functions or classes.
+2. Existing utilities.
+3. Existing configuration patterns.
+4. Existing error-handling conventions.
+5. Existing test style.
+6. Existing naming conventions.
+7. Existing logging conventions.
+8. Existing type annotations or schema definitions.
+
+Do not invent a new pattern when the repository already has one.
+
+---
+
+## Backward compatibility
+
+Preserve backward compatibility unless the task explicitly asks for a breaking change.
+
+Be careful with:
+
+1. Public APIs.
+2. Function signatures.
+3. Config schemas.
+4. CLI arguments.
+5. File formats.
+6. Checkpoint formats.
+7. Dataset formats.
+8. Serialized objects.
+9. Database schemas.
+10. External integrations.
+11. Existing import paths.
+12. Existing default behavior.
+
+When adding new behavior, prefer opt-in changes, feature flags, or compatible extensions if that matches the existing codebase style.
+
+Do not add compatibility shims unnecessarily. Add them only when there is a real backward-compatibility need.
+
+---
+
+## Test and verification policy
+
+Use tests and checks to debug, validate, and gain confidence during implementation. Do not add many permanent tests just to make the change look more complete.
+
+Temporary or local tests are acceptable during debugging, but they should not be committed unless they provide clear long-term value.
+
+Avoid:
+
+1. Adding permanent tests for every small internal change.
+2. Adding tests that are only useful during debugging but will not be maintained.
+3. Adding tests that are unlikely to be run by the team.
+4. Adding tests that are not wired into the normal test runner, CI, or documented commands.
+5. Adding tests that mostly verify mocks, stubs, or implementation details rather than meaningful behavior.
+6. Adding tests that duplicate existing coverage without increasing confidence.
+7. Adding tests that are brittle, slow, environment-dependent, or require hidden setup.
+8. Adding large fixtures, fake services, or test utilities for a small code change.
+9. Adding snapshot or golden-file tests without a strong reason.
+10. Keeping temporary debugging scripts, one-off test files, logs, prints, or experimental checks in the final diff.
+
+Prefer:
+
+1. Run existing relevant tests first.
+2. Extend an existing test only when it is clearly useful.
+3. Add a new permanent test only when it protects important behavior, a public API, a real bug fix, or a risky edge case.
+4. Use temporary scripts, REPL checks, or focused local tests during debugging, then remove them before finalizing unless they are worth maintaining.
+5. Keep the final diff small and avoid test bloat.
+
+If no permanent test is added, that is acceptable when the change is simple, low-risk, or already covered by existing tests. In that case, run the relevant existing checks and clearly report what was verified.
+
+Never claim tests pass unless they were actually run.
+
+---
+
+## Dependency policy
+
+Do not add new dependencies unless explicitly necessary.
+
+Before adding a dependency, check whether the same goal can be achieved with:
+
+1. The standard library.
+2. Existing dependencies.
+3. Existing utilities in the repository.
+4. A smaller local change.
+
+A new dependency requires a clear reason and should follow the repository’s dependency management practice.
+
+Do not add dependencies just to simplify a small implementation.
+
+---
+
+## Comments and documentation
+
+Comments should explain non-obvious intent, constraints, or tradeoffs.
+
+Avoid comments that merely restate the code.
+
+Do not add:
+
+1. Tutorial-style comments.
+2. Obvious comments.
+3. Excessive docstrings inconsistent with nearby code.
+4. AI-style explanations.
+5. Decorative section headers.
+6. Comments explaining temporary implementation details unless necessary.
+7. TODOs without a concrete owner or reason.
+
+When the surrounding file has minimal comments, keep new comments minimal as well.
+
+---
+
+## Error handling
+
+Follow the error-handling style already used in the surrounding code.
+
+Avoid:
+
+1. Broad `try/catch` or `try/except` blocks.
+2. Silent fallback behavior.
+3. Returning default values that hide real failures.
+4. Logging and continuing when the caller should handle the error.
+5. Catching exceptions only to rethrow them unchanged.
+6. Converting precise errors into vague errors.
+
+Add defensive checks only when they are consistent with the codebase and protect a real boundary, such as external input, user-provided data, network responses, file I/O, or unsafe third-party output.
+
+Do not add defensive checks on trusted internal paths just because an AI model is being cautious.
+
+---
+
+## Final response requirements
+
+After making changes, summarize clearly:
+
+1. What changed.
+2. Why the change was made.
+3. Which files were touched.
+4. Which tests or checks were run.
+5. Any tests that were not run and why.
+6. Any backward-compatibility risks.
+
+Keep the final response concise and factual.
+
+Do not over-explain obvious changes.
+Do not claim confidence that is not supported by tests or inspection.

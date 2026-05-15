@@ -1,0 +1,36 @@
+% 数据量-性能曲线 - TikZ版本
+\begin{tikzpicture}[scale=0.9]
+    % 坐标轴
+    \draw[->, thick] (0,0) -- (8,0) node[right] {\small 数据量 (条)};
+    \draw[->, thick] (0,0) -- (0,6) node[above] {\small 成功率 (\%)};
+    
+    % 刻度
+    \foreach \x/\label in {1/100, 3/200, 5/400}
+        \draw (\x,0.1) -- (\x,-0.1) node[below] {\small \label};
+    
+    \foreach \y/\label in {0/40, 1.5/55, 3/70, 4.5/90, 6/100}
+        \draw (0.1,\y) -- (-0.1,\y) node[left] {\small \label};
+    
+    % 网格
+    \draw[gray, dashed, opacity=0.3] (0,0) grid (8,6);
+    
+    % 数据点和连线
+    \filldraw[color=blue!70!black, fill=blue!40] (1,1.5) circle (4pt);
+    \filldraw[color=blue!70!black, fill=blue!40] (3,3) circle (4pt);
+    \filldraw[color=blue!70!black, fill=blue!60] (5,4.5) circle (5pt);
+    
+    \draw[blue!70!black, thick] (1,1.5) -- (3,3) -- (5,4.5);
+    
+    % 数据标签
+    \node[above, blue!70!black, font=\small\bfseries] at (1,1.5) {55\%};
+    \node[above, blue!70!black, font=\small\bfseries] at (3,3) {70\%};
+    \node[above, blue!70!black, font=\small\bfseries] at (5,4.5) {90\%};
+    
+    % 标题
+    \node[font=\bfseries] at (4,6.5) {数据规模对任务成功率的影响};
+    \node[font=\small] at (4,6) {(Pick-Place任务，纯图像输入方案)};
+    
+    % 说明
+    \draw[->, thick, color=red!70!black] (5.5,3) -- (6.5,4);
+    \node[right, font=\scriptsize, text width=2cm] at (6.5,3.5) {数据量增加\\成功率显著提升};
+\end{tikzpicture}

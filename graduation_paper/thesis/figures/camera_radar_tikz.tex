@@ -1,0 +1,56 @@
+% 相机选型雷达图 - TikZ版本
+\begin{tikzpicture}[scale=1.2]
+    % 绘制雷达网格 (5层)
+    \foreach \level in {1,2,3,4,5} {
+        \draw[gray, thin, opacity=0.4] (90:\level*0.6) -- (0:\level*0.6) -- 
+            (-90:\level*0.6) -- (180:\level*0.6) -- cycle;
+    }
+    
+    % 刻度标签
+    \foreach \level in {1,2,3,4,5} {
+        \node[font=\tiny, gray] at (90:\level*0.6 + 0.1) {\level};
+    }
+    
+    % 轴线
+    \draw[gray] (0,0) -- (90:3.2);
+    \draw[gray] (0,0) -- (0:3.2);
+    \draw[gray] (0,0) -- (-90:3.2);
+    \draw[gray] (0,0) -- (180:3.2);
+    
+    % 轴标签
+    \node[font=\small] at (90:3.5) {视野覆盖};
+    \node[font=\small] at (0:3.5) {稳定性};
+    \node[font=\small] at (-90:3.5) {同步便利};
+    \node[font=\small] at (180:3.5) {舒适度};
+    
+    % D435数据 (4,5,5,0) - 舒适度不计为0
+    \draw[blue!70, thick, fill=blue!20, opacity=0.6] 
+        (90:4*0.6) -- (0:5*0.6) -- (-90:5*0.6) -- (180:0) -- cycle;
+    
+    % D435点
+    \foreach \angle/\value in {90/4, 0/5, -90/5} {
+        \fill[blue!70] (\angle:\value*0.6) circle (3pt);
+    }
+    
+    % DJI Nano数据 (5,4,2,5)
+    \draw[purple!70, thick, fill=purple!20, opacity=0.6] 
+        (90:5*0.6) -- (0:4*0.6) -- (-90:2*0.6) -- (180:5*0.6) -- cycle;
+    
+    % DJI点
+    \foreach \angle/\value in {90/5, 0/4, -90/2, 180/5} {
+        \fill[purple!70] (\angle:\value*0.6) circle (3pt);
+    }
+    
+    % 图例
+    \draw[blue!70, thick] (3.5, 1.5) -- (4.2, 1.5);
+    \fill[blue!70] (3.85, 1.5) circle (3pt);
+    \node[right, font=\small] at (4.3, 1.5) {D435固定};
+    
+    \draw[purple!70, thick] (3.5, 1) -- (4.2, 1);
+    \fill[purple!70] (3.85, 1) circle (3pt);
+    \node[right, font=\small] at (4.3, 1) {DJI Nano头戴};
+    
+    % 标题
+    \node[font=\bfseries] at (0, 4) {相机选型对比雷达图};
+    \node[font=\scriptsize] at (0, -4) {(评分维度：1-5分)};
+\end{tikzpicture}

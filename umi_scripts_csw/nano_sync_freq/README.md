@@ -2,7 +2,7 @@
 
 采集中在耳机里播**两种**线性 chirp（`assets/start.wav`、`assets/stop.wav`）打点；后处理在音轨上做**归一化互相关**检峰，再 `ffmpeg` 切片。本目录**自成一套**。
 
-**固定操作顺序、给新人照做**以 [`FREQ_WORKFLOW.md`](FREQ_WORKFLOW.md) 为准；本文件补充依赖、试音与参数索引。
+**固定操作顺序、给新人照做**以 [`FREQ_WORKFLOW.md`](FREQ_WORKFLOW.md) 为准（其中 **§4 稳定约定** 为标注页快捷键的**正式语义**；实现见 `annotate/app.js`）。本文件补充依赖、试音与参数索引。
 
 ## 依赖
 

@@ -1,6 +1,7 @@
 /* global document, window, URL, fetch, FileReader, Blob, URLSearchParams */
 /**
  * 标定时间轴：系统参考层 + 可编辑起停、HTML5 视频；快捷键 a/c、e、Space；
+ * e：选中竖线后，把该时刻从起表挪到停表或反之（只动此点，不与其他点互换）；
  * ⌘/Ctrl+Z 撤销、⇧+⌘/Ctrl+Z 重做（输入框内交给浏览器）；导出 JSON。
  */
 (function () {
@@ -375,7 +376,7 @@
         d.title =
           (lab ? lab + " " : "") +
           t.toFixed(3) +
-          "s — 点击选中后按 e 与配对起/停互换";
+          "s — 选中后按 e：此起停互换类别（该时刻移到另一张表）";
       } else {
         d.title = (lab ? lab + " " : "") + t.toFixed(3) + "s";
       }
@@ -385,60 +386,37 @@
   }
 
   /**
-   * 与 segment 一致的贪心成对：返回 start 表下标 -> stop 表下标（仅已配对的起）。
+   * 选中某一「起」或「停」竖线后：把该时刻从起表移到停表，或从停表移到起表（仅此一点，不与别的点对换）。
    */
-  function greedyStartToStopIndex() {
-    const s = userS
-      .map((v, i) => ({ v: Number(v), i }))
-      .sort((a, b) => a.v - b.v || a.i - b.i);
-    const t = userT
-      .map((v, i) => ({ v: Number(v), i }))
-      .sort((a, b) => a.v - b.v || a.i - b.i);
-    let j = 0;
-    const startToStop = new Map();
-    for (const { v: ts, i: si } of s) {
-      while (j < t.length && t[j].v <= ts + 1e-9) {
-        j += 1;
-      }
-      if (j >= t.length) {
-        continue;
-      }
-      startToStop.set(si, t[j].i);
-      j += 1;
-    }
-    return startToStop;
-  }
-
-  /** 选中的起/停与贪心配对的那一侧互换数值（不自动排序，便于继续改） */
-  function swapPairedPick() {
+  function reclassifyPickAtSelection() {
     if (!pickMarker) {
       return false;
     }
-    const map = greedyStartToStopIndex();
     if (pickMarker.k === "s") {
-      const si = pickMarker.idx;
-      const tj = map.get(si);
-      if (tj === undefined) {
+      const i = pickMarker.idx;
+      if (i < 0 || i >= userS.length) {
         return false;
       }
-      const a = userS[si];
-      userS[si] = userT[tj];
-      userT[tj] = a;
+      const tVal = userS[i];
+      userS.splice(i, 1);
+      userT.push(tVal);
+      userS.sort(sortNum);
+      userT.sort(sortNum);
+      const ni = userT.indexOf(tVal);
+      pickMarker = ni >= 0 ? { k: "t", idx: ni } : null;
       return true;
     }
-    const ti = pickMarker.idx;
-    let siFound = -1;
-    map.forEach(function (tj, si) {
-      if (tj === ti) {
-        siFound = si;
-      }
-    });
-    if (siFound < 0) {
+    const j = pickMarker.idx;
+    if (j < 0 || j >= userT.length) {
       return false;
     }
-    const a = userT[ti];
-    userT[ti] = userS[siFound];
-    userS[siFound] = a;
+    const tVal = userT[j];
+    userT.splice(j, 1);
+    userS.push(tVal);
+    userS.sort(sortNum);
+    userT.sort(sortNum);
+    const ni = userS.indexOf(tVal);
+    pickMarker = ni >= 0 ? { k: "s", idx: ni } : null;
     return true;
   }
 
@@ -836,7 +814,7 @@
         return;
       }
       recordBeforeChange();
-      if (!swapPairedPick()) {
+      if (!reclassifyPickAtSelection()) {
         undoStack.pop();
       } else {
         renderTableS();

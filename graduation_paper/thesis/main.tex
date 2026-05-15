@@ -1,0 +1,95 @@
+% 清华大学本科毕业论文模板 - 具身智能无本体数据采集与模仿学习方法研究
+\documentclass[UTF8,a4paper,12pt,fontset=fandol]{ctexart}
+
+% 页面设置
+\usepackage{geometry}
+\geometry{top=3cm,bottom=3cm,left=3cm,right=3cm}
+
+% 数学支持
+\usepackage{amsmath,amssymb,amsfonts}
+
+% 图表支持
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+
+% 列表环境
+\usepackage{enumitem}
+
+% 超链接
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black}
+
+% 参考文献
+\usepackage[numbers,sort&compress]{natbib}
+
+% 代码高亮（如果需要）
+\usepackage{listings}
+\lstset{basicstyle=\small\ttfamily}
+
+% 算法伪代码
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% TikZ绘图
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, backgrounds}
+
+% 其他常用包
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{xcolor}
+
+% 标题格式设置
+\ctexset{
+    section = {
+        format = \zihao{3}\heiti\centering,
+        beforeskip = 24pt,
+        afterskip = 18pt
+    },
+    subsection = {
+        format = \zihao{4}\heiti,
+        beforeskip = 24pt,
+        afterskip = 6pt
+    },
+    subsubsection = {
+        format = \zihao{-4}\heiti,
+        beforeskip = 12pt,
+        afterskip = 6pt
+    }
+}
+
+% 行距
+\linespread{1.5}
+
+% 参考文献标题
+\renewcommand{\bibname}{参考文献}
+
+\begin{document}
+
+% 封面
+\input{cover}
+
+% 目录
+\tableofcontents
+\newpage
+
+% 正文
+\input{chapters/chapter1}
+\input{chapters/chapter2}
+\input{chapters/chapter3}
+\input{chapters/chapter4}
+\input{chapters/chapter5}
+\input{chapters/chapter6}
+\input{chapters/chapter7}
+
+% 参考文献
+\bibliographystyle{gbt7714-numerical}
+\bibliography{ref/refs}
+
+% 致谢
+\input{chapters/acknowledgement}
+
+\end{document}

@@ -1,0 +1,204 @@
+\begin{thebibliography}{30}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{#1}
+\expandafter\ifx\csname urlstyle\endcsname\relax\else
+  \urlstyle{same}\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \DeclareUrlCommand\doi{\urlstyle{rm}}
+  \def\eprint#1#2{#2}
+\else
+  \def\doi#1{\href{https://doi.org/#1}{\nolinkurl{#1}}}
+  \let\eprint\href
+\fi
+
+\bibitem[Duan et~al.(2022)Duan, Yu, Chen, Yang, et~al.]{duan2022embodied}
+DUAN J, YU S, CHEN H, et~al.
+\newblock On the road to embodied AI: a survey and outlook of embodied AI
+  research\allowbreak[A/OL].
+\newblock arXiv (2022).
+\newblock \url{https://arxiv.org/abs/2211.11768}.
+
+\bibitem[Billard et~al.(2019)Billard and Kragic]{billard2019learning}
+BILLARD A, KRAGIC D.
+\newblock Learning for adaptive and reactive robot control: a dynamical systems
+  approach\allowbreak[J].
+\newblock MIT Press, 2019.
+
+\bibitem[Kr{\"o}mer et~al.(2021)Kr{\"o}mer, Niekum, and
+  Konidaris]{kroemer2021review}
+KR{\"O}MER O, NIEKUM S, KONIDARIS G.
+\newblock A review of robot learning for manipulation: challenges,
+  representations, and algorithms\allowbreak[J].
+\newblock Journal of Machine Learning Research, 2021, 22\allowbreak (30): 1-82.
+
+\bibitem[Chi et~al.(2024)Chi, Xu, Pan, Cousineau, Burchfiel, Feng, Tedrake, and
+  Song]{chi2024umi}
+CHI C, XU Z, PAN C, et~al.
+\newblock Universal manipulation interface: in-the-wild robot teaching without
+  in-the-wild robots\allowbreak[J].
+\newblock Robotics: Science and Systems (RSS), 2024.
+
+\bibitem[Wang et~al.(2024)Wang, Shi, Wang, Zhang, Fei-Fei, and
+  Liu]{wang2024dexcap}
+WANG C, SHI H, WANG W, et~al.
+\newblock DexCap: scalable and portable mocap data collection system for
+  dexterous manipulation\allowbreak[J].
+\newblock RSS Workshop on Dexterous Manipulation, 2024.
+
+\bibitem[Zhao et~al.(2023)Zhao, Kumar, Levine, and Finn]{zhao2023aloha}
+ZHAO T~Z, KUMAR V, LEVINE S, et~al.
+\newblock Learning fine-grained bimanual manipulation with low-cost
+  hardware\allowbreak[A/OL].
+\newblock arXiv (2023).
+\newblock \url{https://arxiv.org/abs/2304.13705}.
+
+\bibitem[Wang et~al.(2023)Wang, Li, Zhang, Li, Liu, and Zha]{gello2023}
+WANG P, LI X, ZHANG J, et~al.
+\newblock GELLO: a general, low-cost, and intuitive teleoperation framework for
+  robot manipulators\allowbreak[J].
+\newblock CoRL Workshops, 2023.
+
+\bibitem[Argall et~al.(2009)Argall, Chernova, Veloso, and
+  Browning]{argall2009survey}
+ARGALL B~D, CHERNOVA S, VELOSO M, et~al.
+\newblock A survey of robot learning from demonstration\allowbreak[J].
+\newblock Robotics and Autonomous Systems, 2009, 57\allowbreak (5): 469-483.
+
+\bibitem[Osa et~al.(2018)Osa, Pajarinen, Neumann, Bagnell, Abbeel, and
+  Peters]{osa2018algorithmic}
+OSA T, PAJARINEN J, NEUMANN G, et~al.
+\newblock An algorithmic perspective on imitation learning\allowbreak[J].
+\newblock Foundations and Trends in Robotics, 2018, 7\allowbreak (1-2): 1-179.
+
+\bibitem[Kumar et~al.(2025)Kumar, Aggarwal, and Pathak]{deminf2025}
+KUMAR S, AGGARWAL G, PATHAK D.
+\newblock Robot data curation with mutual information
+  estimators\allowbreak[A/OL].
+\newblock arXiv (2025).
+\newblock \url{https://arxiv.org/abs/2502.08623}.
+
+\bibitem[Gretton et~al.(2005)Gretton, Bousquet, Smola, and
+  Sch{\"o}lkopf]{gretton2005hsic}
+GRETTON A, BOUSQUET O, SMOLA A, et~al.
+\newblock Measuring statistical dependence with hilbert-schmidt
+  norms\allowbreak[J].
+\newblock International Conference on Algorithmic Learning Theory, 2005.
+
+\bibitem[Cheng et~al.(2024)Cheng, Li, Yang, Yang, and
+  Wang]{cheng2024opentelevision}
+CHENG X, LI J, YANG S, et~al.
+\newblock Open-TeleVision: teleoperation with immersive active visual
+  feedback\allowbreak[J].
+\newblock Conference on Robot Learning (CoRL), 2024.
+
+\bibitem[Chi et~al.(2023)Chi, Feng, Du, Xu, Cousineau, Burchfiel, Tedrake, and
+  Song]{chi2023diffusion}
+CHI C, FENG S, DU Y, et~al.
+\newblock Diffusion policy: visuomotor policy learning via action
+  diffusion\allowbreak[J].
+\newblock Robotics: Science and Systems (RSS), 2023.
+
+\bibitem[Xue et~al.(2025)Xue, Ren, Chen, Zhang, Fang, Gu, Xu, and
+  Lu]{xue2025rdp}
+XUE H, REN J, CHEN W, et~al.
+\newblock Reactive diffusion policy: slow-fast visual-tactile policy learning
+  for contact-rich manipulation\allowbreak[J].
+\newblock Robotics: Science and Systems (RSS), 2025.
+
+\bibitem[Brohan et~al.(2023)Brohan, Brown, Carbajal, Chebotar, Chen,
+  Choromanski, et~al.]{rt22023}
+BROHAN A, BROWN N, CARBAJAL J, et~al.
+\newblock RT-2: vision-language-action models transfer web knowledge to robotic
+  control\allowbreak[J].
+\newblock Conference on Robot Learning (CoRL), 2023.
+
+\bibitem[Kim et~al.(2013)Kim and Pineau]{mmdil2013}
+KIM B, PINEAU J.
+\newblock Maximum mean discrepancy imitation learning\allowbreak[J].
+\newblock Robotics: Science and Systems (RSS), 2013.
+
+\bibitem[Intel(2018)]{intel2018realsense}
+INTEL.
+\newblock Intel RealSense D400 series product family\allowbreak[J].
+\newblock Technical Documentation, 2018.
+
+\bibitem[Quigley et~al.(2009)Quigley, Conley, Gerkey, Faust, Foote, Leibs,
+  Wheeler, and Ng]{quigley2009ros}
+QUIGLEY M, CONLEY K, GERKEY B, et~al.
+\newblock ROS: an open-source robot operating system\allowbreak[J].
+\newblock ICRA Workshop on Open Source Software, 2009.
+
+\bibitem[Koubaa(2016)]{koubaa2016ros}
+KOUBAA A.
+\newblock Robot operating system (ROS): the complete reference\allowbreak[J].
+\newblock Springer, 2016.
+
+\bibitem[Oppenheim et~al.(1999)Oppenheim, Schafer, and
+  Buck]{oppenheim1999discrete}
+OPPENHEIM A~V, SCHAFER R~W, BUCK J~R.
+\newblock Discrete-time signal processing\allowbreak[J].
+\newblock Prentice Hall, 1999.
+
+\bibitem[Rabiner et~al.(1969)Rabiner, Schafer, and Rader]{rabiner1975chirp}
+RABINER L~R, SCHAFER R~W, RADER C~M.
+\newblock Chirp z-transform algorithm\allowbreak[J].
+\newblock IEEE Transactions on Audio and Electroacoustics, 1969, 17\allowbreak
+  (2): 86-92.
+
+\bibitem[Berndt et~al.(1994)Berndt and Clifford]{berndt1994dtw}
+BERNDT D~J, CLIFFORD J.
+\newblock Using dynamic time warping to find patterns in time
+  series\allowbreak[J].
+\newblock AAAI Workshop on Knowledge Discovery in Databases, 1994.
+
+\bibitem[M{\"u}ller(2007)]{mueller2007dtw}
+M{\"U}LLER M.
+\newblock Dynamic time warping\allowbreak[J].
+\newblock Information Retrieval for Music and Motion, 2007: 69-84.
+
+\bibitem[Schubert et~al.(2017)Schubert, Sander, Ester, Kriegel, and
+  Xu]{schubert2017clustering}
+SCHUBERT E, SANDER J, ESTER M, et~al.
+\newblock DBSCAN revisited, revisited: why and how you should (Still) use
+  DBSCAN\allowbreak[J].
+\newblock ACM Transactions on Database Systems, 2017, 42\allowbreak (3).
+
+\bibitem[Zhai et~al.(2023)Zhai, Mustafa, Kolesnikov, and
+  Puigcerver]{siglip2023}
+ZHAI X, MUSTAFA B, KOLESNIKOV A, et~al.
+\newblock Sigmoid loss for language image pre-training\allowbreak[J].
+\newblock IEEE International Conference on Computer Vision (ICCV), 2023.
+
+\bibitem[Saxena et~al.(2008)Saxena and Chirikjian]{saxena2008mathematical}
+SAXENA A, CHIRIKJIAN G~S.
+\newblock Mathematical analysis of quaternion operations for robot
+  kinematics\allowbreak[J].
+\newblock IEEE Transactions on Robotics, 2008.
+
+\bibitem[Zhou et~al.(2019)Zhou, Barnes, Lu, Yang, and Li]{zhou2019continuity}
+ZHOU Y, BARNES C, LU J, et~al.
+\newblock On the continuity of rotation representations in neural
+  networks\allowbreak[J].
+\newblock IEEE Conference on Computer Vision and Pattern Recognition (CVPR),
+  2019.
+
+\bibitem[Cadene et~al.(2024)Cadene, Bahl, Gallouedec, et~al.]{lerobot2024}
+CADENE R, BAHL S, GALLOUEDEC Q, et~al.
+\newblock LeRobot: a toolkit for real-world robotics\allowbreak[J].
+\newblock Hugging Face, 2024.
+
+\bibitem[Intelligence(2025)]{pi0_5_2025}
+INTELLIGENCE P.
+\newblock π0.5: an open-source mixture-of-experts vision-language-action
+  model\allowbreak[A/OL].
+\newblock arXiv (2025).
+\newblock \url{https://arxiv.org/abs/2504.08776}.
+
+\bibitem[Black et~al.(2024)Black, Bharadhwaj, Brown, Go, Kappler, Levine,
+  et~al.]{pi0_2024}
+BLACK K, BHARADHWAJ H, BROWN N, et~al.
+\newblock π0: a vision-language-action flow model for general robot
+  control\allowbreak[J].
+\newblock Physical Intelligence, 2024.
+
+\end{thebibliography}
